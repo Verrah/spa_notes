@@ -45,6 +45,8 @@ This tutorial relies on the following libraries that you will need to have insta
 ```{r}
 # Layout
 library(tufte)
+# For pretty table
+library(knitr)
 # Spatial Data management
 library(rgdal)
 # Pretty graphics
@@ -62,9 +64,9 @@ library(plyr)
 Before we start any analysis, let us set the path to the directory where we are working. We can easily do that with `setwd()`. Please replace in the following line the path to the folder where you have placed this file -and where the `house_transactions` folder with the data lives.
 
 ```{r}
-#setwd('~/AAA/Documents/teaching/u-lvl/2016/envs453/code')
+setwd('~/Desktop/kde_idw_r/')
 #setwd('/media/dani/baul/AAA/Documents/teaching/u-lvl/2016/envs453/code')
-setwd('.')
+#setwd('.')
 ```
 
 # Data
@@ -75,6 +77,16 @@ Let us start by reading the data, which comes in a shapefile:
 
 ```{r}
 db <- readOGR(dsn = 'house_transactions', layer = 'liv_house_trans')
+```
+
+The dataset spans the year 2014:
+
+```{r}
+# Format dates
+dts <- as.Date(db@data$trans_date)
+# Set up summary table
+tab <- summary(dts)[c('Min.', 'Max.')]
+tab
 ```
 
 We can then examine the elements of the object with the `summary` method:
@@ -381,15 +393,47 @@ final
 
 The last bit we will explore in this session relates to prediction for new values. Imagine you are a real state data scientist and your boss asks you to give an estimate of how much a new house going into the market should cost. The only information you have to make such a guess is the location of the house. In this case, the IDW model we have just fitted can help you. The trick is realizing that, instead of creating an entire grid, all we need is to obtain an estimate of a single location.
 
-Let us say, the house is located on the coordinates `x=34000, y=39000` as expressed in the GB National Grid coordinate system. In that case, we can do as follows:
+Let us say, the house is located on the coordinates `x=340000, y=390000` as expressed in the GB National Grid coordinate system. In that case, we can do as follows:
 
 ```{r}
-pt <- SpatialPoints(cbind(x=34000, y=39000),
+pt <- SpatialPoints(cbind(x=340000, y=390000),
                     proj4string = db@proj4string)
 idw.one <- idw(price ~ 1, locations=db, newdata=pt)
 idw.one
 ```
 
-And, as show above, the estimated value is GBP144,595.5^[**PRO QUESTION** Is that house expensive or cheap, as compared to the other houses sold in this dataset? Can you figure out where the house is?].
+And, as show above, the estimated value is GBP157,099^[**PRO QUESTION** Is that house expensive or cheap, as compared to the other houses sold in this dataset? Can you figure out where the house is?].
+
+Using this predictive logic, and taking advantage of Google Maps and its geocoding capabilities, it is possible to devise a function that takes an arbitrary address in Liverpool and, based on the transactions occurred throughout 2014, provides an estimate of what the price for a property in that location could be.
+
+```{r}
+how.much.is <- function(address, print.message=TRUE){
+  # Convert the address into Lon/Lat coordinates
+  ll.pt <- geocode(address)
+  # Process as spatial table
+  wgs84 <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+  ll.pt <- SpatialPoints(cbind(x=ll.pt$lon, y=ll.pt$lat),
+                      proj4string = wgs84)
+  # Transform Lon/Lat into OSGB
+  pt <- spTransform(ll.pt, db@proj4string)
+  # Obtain prediction
+  idw.one <- idw(price ~ 1, locations=db, newdata=pt)
+  price <- idw.one@data$var1.pred
+  # Return predicted price
+  if(print.message==T){
+    writeLines(paste("\n\nBased on what surrounding properties were sold",
+                    "for in 2014 a house located at", address, "would", 
+                    "cost",  paste("GBP", round(price), ".", sep=''), "\n\n"))
+  }
+  return(price)
+}
+```
+
+Ready to test!
+
+```{r}
+address <- "74 Bedford St S, Liverpool, L69 7ZT, UK"
+p <- how.much.is(address)
+```
 
 # References
