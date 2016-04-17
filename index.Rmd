@@ -1,8 +1,8 @@
 ---
 title: "Spatial Analysis Notes"
 subtitle: "Computational illustrations in R"
-author: "Dani Arribas-Bel"
-date: "`r Sys.Date()`"
+author: "[Dani Arribas-Bel](http://darribas.org) ([`@darribas`](http://twitter.com/darribas))"
+date: ""
 output:
   tufte::tufte_html: default
   tufte::tufte_handout:
