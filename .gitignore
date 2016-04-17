@@ -1,5 +1,6 @@
 *.swp
 *.Rout
+*.*~
 temp.html
 
 .DS_Store
