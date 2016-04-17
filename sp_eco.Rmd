@@ -1,6 +1,6 @@
 ---
-title: "Points"
-subtitle: "Kernel Density Estimation and Spatial Interpolation"
+title: "Spatial Econometrics"
+subtitle: "An Introduction to Spatial Regression"
 author: "Dani Arribas-Bel"
 date: "`r Sys.Date()`"
 output:
