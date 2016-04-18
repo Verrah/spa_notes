@@ -1,6 +1,7 @@
 *.swp
 *.Rout
 temp.html
+*.*~
 
 # History files
 .Rhistory
