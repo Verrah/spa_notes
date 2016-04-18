@@ -11,7 +11,7 @@
 
 <meta name="author" content="Dani Arribas-Bel" />
 
-<meta name="date" content="2016-04-17" />
+<meta name="date" content="2016-04-18" />
 
 <title>Spatial Econometrics</title>
 
@@ -43,7 +43,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <h1 class="title">Spatial Econometrics</h1>
 <h3 class="subtitle"><em>An Introduction to Spatial Regression</em></h3>
 <h4 class="author"><em>Dani Arribas-Bel</em></h4>
-<h4 class="date"><em>2016-04-17</em></h4>
+<h4 class="date"><em>2016-04-18</em></h4>
 
 </div>
 
@@ -126,6 +126,17 @@ tab</code></pre>
 ## [16] &quot;ppd_cat&quot;    &quot;status&quot;     &quot;lsoa11&quot;     &quot;imd_rank&quot;   &quot;imd_score&quot; 
 ## [21] &quot;income&quot;     &quot;employment&quot; &quot;education&quot;  &quot;health&quot;     &quot;crime&quot;     
 ## [26] &quot;housing&quot;    &quot;living_env&quot; &quot;idaci&quot;      &quot;idaopi&quot;</code></pre>
+<p>For some of our analysis, we will need the coarse postcode of each house, rather than the finely specified one in the original data. This means using the available one</p>
+<pre class="r"><code>head(db@data['pcds'])</code></pre>
+<pre><code>##      pcds
+## 62 L1 0AB
+## 63 L1 0AB
+## 64 L1 0AB
+## 65 L1 0AB
+## 66 L1 0AB
+## 67 L1 0AB</code></pre>
+<p>to create a new column that only contains the first bit of the postcode (<code>L1</code> in the examples above). The following lines of code will do that for us:</p>
+<pre class="r"><code>db$pc &lt;- as.character(lapply(strsplit(as.character(db$pcds), split=&quot; &quot;), &quot;[&quot;, 1))</code></pre>
 <p>Given there are 6,324 transactions in the dataset, a simple plot of the point coordinates implicitly draws the shape of the Liverpool municipality:</p>
 <p>
 <span class="marginnote shownote"><!--
@@ -198,16 +209,68 @@ summary(m2)</code></pre>
 </div>
 <div id="spatial-regression-a-very-first-dip" class="section level1">
 <h1>Spatial regression: a (very) first dip</h1>
-<p>Motivation</p>
+<p>Spatial regression is about <em>explicitly</em> introducing space or geographical context into the statistical framework of a regression. Conceptually, we want to introduce space into our model whenever we think it plays an important role in the process we are interested in, or when space can act as a reasonable proxy for other factors we cannot but should include in our model. As an example of the former, we can imagine how houses at the seafront are probably more expensive than those in the second row, given their better views. To illustrate the latter, we can think of how the character of a neighborhood is important in determining the price of a house; however, it is very hard to identify and quantify “character” perse, although it might be easier to get at its spatial variation, hence a case of space as a proxy.</p>
+<p>Spatial regression is a large field of development in the econometrics and statistics literatures. In this brief introduction, we will consider two related but very different processes that give rise to spatial effects: spatial heterogeneity and spatial dependence. For more rigorous treatments of the topics introduced here, the reader is referred to <span class="citation">Anselin (2003)</span>, <span class="citation">Anselin and Rey (2014)</span>, and <span class="citation">Gibbons, Overman, and Patacchini (2014)</span>.</p>
 <div id="spatial-heterogeneity" class="section level2">
 <h2>Spatial heterogeneity</h2>
+<p>Spatial heterogeneity (SH) arises when we cannot safely assume the process we are studying operates under the same “rules” throughout the geography of interest. In other words, we can observe SH when there are effects on the outcome variable that are intrinsically linked to specific locations. A good example of this is the case of seafront houses above: we are trying to model the price of a house and, the fact some houses are located under certain conditions (i.e. by the sea) makes their price behave differently<label for="tufte-sn-7" class="margin-toggle sidenote-number">7</label><input type="checkbox" id="tufte-sn-7" class="margin-toggle"><span class="sidenote"><span class="sidenote-number">7</span> <strong>QUESTION</strong> How would you incorporate this into a regression model that extends the log-log equation of the previous section?</span>.</p>
+<p>This somewhat abstract concept of SH can be made operational in a model in several ways. We will explore the following two: spatial fixed-effects (FE), and spatial regimes.</p>
+<p><strong>Spatial FE</strong></p>
+<p>Let us consider the house price example from the previous section to introduce a more general illustration that relates to the second motivation for spatial effects (“space as a proxy”) is what is. Given we are only including two explanatory variables in the model, it is likely we are missing some important factors that play a role at determining the price at which a house is sold. Some of them, however, are likely to vary systematically over space (e.g. different neighborhood characteristics). If that is the case, we can control for those unobserved factors by using traditional dummy variables but basing their creation on a spatial rule. For example, let us include a binary variable for every two-digit postcode in Liverpool, indicating whether a given house is located within such area (<code>1</code>) or not (<code>0</code>). Programmatically, this is straightforward:</p>
+<pre class="r"><code># Include `-1` to eliminate the constant term and include a dummy for every area
+m3 &lt;- lm('log(price) ~ pc + new + log(imd_score) - 1', db)
+summary(m3)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = &quot;log(price) ~ pc + new + log(imd_score) - 1&quot;, data = db)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -4.2853 -0.2744 -0.0259  0.2513  5.6489 
+## 
+## Coefficients:
+##                Estimate Std. Error t value Pr(&gt;|t|)    
+## pcL1           12.72971    0.05821  218.70   &lt;2e-16 ***
+## pcL10          12.91716    0.09260  139.49   &lt;2e-16 ***
+## pcL11          12.88647    0.06906  186.61   &lt;2e-16 ***
+## pcL12          13.05348    0.05467  238.77   &lt;2e-16 ***
+## pcL13          12.87225    0.06367  202.18   &lt;2e-16 ***
+## pcL14          12.91258    0.06755  191.17   &lt;2e-16 ***
+## pcL15          13.02870    0.05659  230.22   &lt;2e-16 ***
+## pcL16          13.13843    0.05023  261.54   &lt;2e-16 ***
+## pcL17          13.27288    0.05493  241.63   &lt;2e-16 ***
+## pcL18          13.27455    0.04544  292.14   &lt;2e-16 ***
+## pcL19          13.12792    0.05460  240.44   &lt;2e-16 ***
+## pcL2           13.05230    0.10959  119.10   &lt;2e-16 ***
+## pcL20          12.82414    0.23068   55.59   &lt;2e-16 ***
+## pcL24          12.85954    0.06995  183.83   &lt;2e-16 ***
+## pcL25          13.18340    0.05240  251.59   &lt;2e-16 ***
+## pcL27          13.02308    0.10661  122.15   &lt;2e-16 ***
+## pcL28          12.42124    0.21096   58.88   &lt;2e-16 ***
+## pcL3           12.93580    0.05477  236.16   &lt;2e-16 ***
+## pcL4           12.65911    0.06721  188.34   &lt;2e-16 ***
+## pcL5           12.93297    0.07759  166.69   &lt;2e-16 ***
+## pcL6           12.81728    0.06921  185.20   &lt;2e-16 ***
+## pcL7           12.83274    0.06977  183.93   &lt;2e-16 ***
+## pcL8           12.98639    0.06628  195.93   &lt;2e-16 ***
+## pcL9           12.77233    0.06106  209.16   &lt;2e-16 ***
+## newY            0.29365    0.02065   14.22   &lt;2e-16 ***
+## log(imd_score) -0.41098    0.01539  -26.70   &lt;2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.4944 on 6298 degrees of freedom
+## Multiple R-squared:  0.9982, Adjusted R-squared:  0.9982 
+## F-statistic: 1.338e+05 on 26 and 6298 DF,  p-value: &lt; 2.2e-16</code></pre>
 <ul>
-<li>Spatial FE</li>
-<li>Spatial regimes</li>
+<li>Drops <code>L1</code> so it’s with respect to L1</li>
+<li>It compares houses within <code>L</code></li>
+<li>As a byproduct, it gives a measure of area desirability</li>
 </ul>
+<p><strong>Spatial regimes</strong></p>
 </div>
-<div id="spatial-interaction" class="section level2">
-<h2>Spatial interaction</h2>
+<div id="spatial-dependence" class="section level2">
+<h2>Spatial dependence</h2>
 <ul>
 <li>Exogenous spatial effects</li>
 <li>Point to further spatial regression (lag, error) –&gt; Anselin (1988, 2003), plus Anselin &amp; Rey (2015) for an in-depth treatment of modern approaches</li>
@@ -222,8 +285,11 @@ summary(m2)</code></pre>
 </ul>
 <div class="references">
 <h1 id="references" class="unnumbered">References</h1>
+<p>Anselin, Luc. 2003. “Spatial Externalities, Spatial Multipliers, and Spatial Econometrics.” <em>International Regional Science Review</em> 26 (2). Sage Publications: 153–66.</p>
+<p>Anselin, Luc, and Sergio J. Rey. 2014. <em>Modern Spatial Econometrics in Practice: A Guide to GeoDa, GeoDaSpace and PySAL</em>. GeoDa Press LLC.</p>
 <p>Arribas-Bel, Dani. 2014. “Spatial Data, Analysis, and Regression-a Mini Course.” <em>REGION</em> 1 (1). European Regional Science Association: R1. <a href="http://darribas.org/sdar_mini" class="uri">http://darribas.org/sdar_mini</a>.</p>
 <p>Gelman, Andrew, and Jennifer Hill. 2006. <em>Data Analysis Using Regression and Multilevel/hierarchical Models</em>. Cambridge University Press.</p>
+<p>Gibbons, Stephen, Henry G Overman, and Eleonora Patacchini. 2014. “Spatial Methods.” CEPR Discussion Paper No. DP10135.</p>
 </div>
 </div>
 

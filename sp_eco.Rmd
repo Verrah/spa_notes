@@ -119,6 +119,18 @@ The resulting table, `db`, contains variables from both original tables:
 names(db)
 ```
 
+For some of our analysis, we will need the coarse postcode of each house, rather than the finely specified one in the original data. This means using the available one
+
+```{r}
+head(db@data['pcds'])
+```
+
+to create a new column that only contains the first bit of the postcode (`L1` in the examples above). The following lines of code will do that for us:
+
+```{r}
+db$pc <- as.character(lapply(strsplit(as.character(db$pcds), split=" "), "[", 1))
+```
+
 Given there are 6,324 transactions in the dataset, a simple plot of the point coordinates implicitly draws the shape of the Liverpool municipality:
 
 ```{r, fig.margin = TRUE, fig.cap = 'Spatial distribution of house transactions in Liverpool'}
@@ -172,14 +184,33 @@ Looking at the results we can see a couple of differences with respect to the or
 
 # Spatial regression: a (very) first dip
 
-Motivation
+Spatial regression is about *explicitly* introducing space or geographical context into the statistical framework of a regression. Conceptually, we want to introduce space into our model whenever we think it plays an important role in the process we are interested in, or when space can act as a reasonable proxy for other factors we cannot but should include in our model. As an example of the former, we can imagine how houses at the seafront are probably more expensive than those in the second row, given their better views. To illustrate the latter, we can think of how the character of a neighborhood is important in determining the price of a house; however, it is very hard to identify and quantify "character" perse, although it might be easier to get at its spatial variation, hence a case of space as a proxy.
+
+Spatial regression is a large field of development in the econometrics and statistics literatures. In this brief introduction, we will consider two related but very different processes that give rise to spatial effects: spatial heterogeneity and spatial dependence. For more rigorous treatments of the topics introduced here, the reader is referred to @anselin2003spatial, @anselin2014modern, and @gibbons2014spatial.
 
 ## Spatial heterogeneity
 
-* Spatial FE
-* Spatial regimes
+Spatial heterogeneity (SH) arises when we cannot safely assume the process we are studying operates under the same "rules" throughout the geography of interest. In other words, we can observe SH when there are effects on the outcome variable that are intrinsically linked to specific locations. A good example of this is the case of seafront houses above: we are trying to model the price of a house and, the fact some houses are located under certain conditions (i.e. by the sea) makes their price behave differently^[**QUESTION** How would you incorporate this into a regression model that extends the log-log equation of the previous section?].
 
-## Spatial interaction
+This somewhat abstract concept of SH can be made operational in a model in several ways. We will explore the following two: spatial fixed-effects (FE), and spatial regimes.
+
+**Spatial FE**
+
+Let us consider the house price example from the previous section to introduce a more general illustration that relates to the second motivation for spatial effects ("space as a proxy") is what is. Given we are only including two explanatory variables in the model, it is likely we are missing some important factors that play a role at determining the price at which a house is sold. Some of them, however, are likely to vary systematically over space (e.g. different neighborhood characteristics). If that is the case, we can control for those unobserved factors by using traditional dummy variables but basing their creation on a spatial rule. For example, let us include a binary variable for every two-digit postcode in Liverpool, indicating whether a given house is located within such area (`1`) or not (`0`). Programmatically, this is straightforward:
+
+```{r}
+# Include `-1` to eliminate the constant term and include a dummy for every area
+m3 <- lm('log(price) ~ pc + new + log(imd_score) - 1', db)
+summary(m3)
+```
+
+* Drops `L1` so it's with respect to L1
+* It compares houses within `L`
+* As a byproduct, it gives a measure of area desirability
+
+**Spatial regimes**
+
+## Spatial dependence
 
 * Exogenous spatial effects
 * Point to further spatial regression (lag, error) --> Anselin (1988, 2003), plus Anselin & Rey (2015) for an in-depth treatment of modern approaches
