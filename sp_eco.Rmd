@@ -25,6 +25,8 @@ options(htmltools.dir.version = FALSE)
 This session^[<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br /><span xmlns:dct="http://purl.org/dc/terms/" property="dct:title">Points -- Kernel Density Estimation and Spatial interpolation</span> by <a xmlns:cc="http://creativecommons.org/ns#" href="http://darribas.org" property="cc:attributionName" rel="cc:attributionURL">Dani Arribas-Bel</a> is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.] is based on the following references, which are good follow-up's on the topic:
 
 * [Session III](http://darribas.org/sdar_mini/notes/Class_03.html) of @arribas2014spatial. Check the "Related readings" section on the session page for more in-depth discussions.
+* @anselin2005spatial, freely available to download [[pdf](http://csiss.org/GISPopSci/workshops/2011/PSU/readings/W15_Anselin2007.pdf)].
+* The second part of this tutorial assumes you have reviewed Lecture 5 of @darribas_gds15. [[html](http://darribas.org/gds15/notes/Class_05.html)]
 
 This tutorial is part of [Spatial Analysis Notes](index.html), a compilation hosted as a GitHub repository that you can access it in a few ways:
 
@@ -64,7 +66,7 @@ library(spdep)
 Before we start any analysis, let us set the path to the directory where we are working. We can easily do that with `setwd()`. Please replace in the following line the path to the folder where you have placed this file -and where the `house_transactions` folder with the data lives.
 
 ```{r}
-setwd('/media/dani/baul/AAA/Documents/teaching/u-lvl/2016/envs453/code/GIT/kde_idw_r/')
+setwd('/Users/dani/AAA/Documents/teaching/u-lvl/2016/envs453/code/GIT/kde_idw_r/')
 #setwd('.')
 ```
 
@@ -167,20 +169,20 @@ summary(m1)
 
 A full detailed explanation of the output is beyond the scope of this note, so we will focus on the relevant bits for our main purpose. This is concentrated on the `Coefficients` section, which gives us the estimates for the $\beta_k$ coefficients in our model. Or, in other words, the coefficients are the raw equivalent of the correlation coefficient between each explanatory variable and the dependent one, once the polluting effect of confounding factors has been accounted for^[Keep in mind that regression is no magic. We are only discounting the effect of other confounding factors that we include in the model, not of *all* potentially confounding factors.]. Results are as expected for the most part: houses tend to be significantly more expensive in areas with lower deprivation (an average of GBP2,416 for every additional score); and a newly built house is on average GBP4,926 more expensive, although this association cannot be ruled out to be random (probably due to the small relative number of new houses).
 
-Finally, before we jump into introducing space in our models, let us modify our equation slightly to make it more useful when it comes to interpretating it. Virtually every house price model in the literature is estimated in log-log terms:
+Finally, before we jump into introducing space in our models, let us modify our equation slightly to make it more useful when it comes to interpretating it. Many house price models in the literature is estimated in log-linear terms:
 
 $$
-\log{P_i} = \alpha + \beta_1 \log{NEW_i} + \beta_2 \log{IMD_i} + \epsilon_i
+\log{P_i} = \alpha + \beta_1 NEW_i + \beta_2 IMD_i + \epsilon_i
 $$
 
-This allows to interpret the coefficients as *elasticities*, an economic term used to capture the percentual variation that a variable experiences as a result of a one percent increase in another one. This comes in very handy because it standardizes the results across variables. To fit such a model, we can specify the logarithm of a given variable directly in the formula. Note that we do not transform `new`, as it is a binary variable.
+This allows to interpret the coefficients more directly: as the percentual change induced by a unit increase in the explanatory variable of the estimate. To fit such a model, we can specify the logarithm of a given variable directly in the formula.
 
 ```{r}
-m2 <- lm('log(price) ~ new + log(imd_score)', db)
+m2 <- lm('log(price) ~ new + imd_score', db)
 summary(m2)
 ```
 
-Looking at the results we can see a couple of differences with respect to the original specification. First, the estimates are substantially different numbers. This is because, although they consider the same variable, the look at it from different angles, and provide different interpretations. For example, the coefficient for the IMD, instead of being interpretable in terms of GBP, the unit of the dependent variable, it represents an elasticity: a 1% increase in the degree of deprivation is associated with a 0.57% decrease in the price of a house.^[**EXERCISE** *How does the type of a house affect the price at which it is sold, given whether it is new and the level of deprivation of the area where it is located?* To answer this, fit a model as we have done but including additionally the variable `type`. In order to interpret the codes, check the reference at the [Land Registry documentation](https://www.gov.uk/guidance/about-the-price-paid-data#explanations-of-column-headers-in-the-ppd).] Second, the variable `new` is significant in this case. This is probably related to the fact that, by taking logs, we are also making the dependent variable look more normal (Gaussian) and that allows the linear model to provide a better fit and, hence, more accurate estimates. In this case, a house being newly built, as compared to an old house, is overall 23% more expensive.
+Looking at the results we can see a couple of differences with respect to the original specification. First, the estimates are substantially different numbers. This is because, although they consider the same variable, the look at it from different angles, and provide different interpretations. For example, the coefficient for the IMD, instead of being interpretable in terms of GBP, the unit of the dependent variable, it represents a percentage: a unit increase in the degree of deprivation is associated with a 0.2% decrease in the price of a house.^[**EXERCISE** *How does the type of a house affect the price at which it is sold, given whether it is new and the level of deprivation of the area where it is located?* To answer this, fit a model as we have done but including additionally the variable `type`. In order to interpret the codes, check the reference at the [Land Registry documentation](https://www.gov.uk/guidance/about-the-price-paid-data#explanations-of-column-headers-in-the-ppd).] Second, the variable `new` is significant in this case. This is probably related to the fact that, by taking logs, we are also making the dependent variable look more normal (Gaussian) and that allows the linear model to provide a better fit and, hence, more accurate estimates. In this case, a house being newly built, as compared to an old house, is overall 25% more expensive.
 
 # Spatial regression: a (very) first dip
 
@@ -188,36 +190,181 @@ Spatial regression is about *explicitly* introducing space or geographical conte
 
 Spatial regression is a large field of development in the econometrics and statistics literatures. In this brief introduction, we will consider two related but very different processes that give rise to spatial effects: spatial heterogeneity and spatial dependence. For more rigorous treatments of the topics introduced here, the reader is referred to @anselin2003spatial, @anselin2014modern, and @gibbons2014spatial.
 
-## Spatial heterogeneity
+# Spatial heterogeneity
 
-Spatial heterogeneity (SH) arises when we cannot safely assume the process we are studying operates under the same "rules" throughout the geography of interest. In other words, we can observe SH when there are effects on the outcome variable that are intrinsically linked to specific locations. A good example of this is the case of seafront houses above: we are trying to model the price of a house and, the fact some houses are located under certain conditions (i.e. by the sea) makes their price behave differently^[**QUESTION** How would you incorporate this into a regression model that extends the log-log equation of the previous section?].
+Spatial heterogeneity (SH) arises when we cannot safely assume the process we are studying operates under the same "rules" throughout the geography of interest. In other words, we can observe SH when there are effects on the outcome variable that are intrinsically linked to specific locations. A good example of this is the case of seafront houses above: we are trying to model the price of a house and, the fact some houses are located under certain conditions (i.e. by the sea), makes their price behave differently^[**QUESTION** How would you incorporate this into a regression model that extends the log-log equation of the previous section?].
 
-This somewhat abstract concept of SH can be made operational in a model in several ways. We will explore the following two: spatial fixed-effects (FE), and spatial regimes.
+This somewhat abstract concept of SH can be made operational in a model in several ways. We will explore the following two: spatial fixed-effects (FE); and spatial regimes, which is a generalization of FE.
 
-**Spatial FE**
+## Spatial FE
 
-Let us consider the house price example from the previous section to introduce a more general illustration that relates to the second motivation for spatial effects ("space as a proxy") is what is. Given we are only including two explanatory variables in the model, it is likely we are missing some important factors that play a role at determining the price at which a house is sold. Some of them, however, are likely to vary systematically over space (e.g. different neighborhood characteristics). If that is the case, we can control for those unobserved factors by using traditional dummy variables but basing their creation on a spatial rule. For example, let us include a binary variable for every two-digit postcode in Liverpool, indicating whether a given house is located within such area (`1`) or not (`0`). Programmatically, this is straightforward:
+Let us consider the house price example from the previous section to introduce a more general illustration that relates to the second motivation for spatial effects ("space as a proxy"). Given we are only including two explanatory variables in the model, it is likely we are missing some important factors that play a role at determining the price at which a house is sold. Some of them, however, are likely to vary systematically over space (e.g. different neighborhood characteristics). If that is the case, we can control for those unobserved factors by using traditional dummy variables but basing their creation on a spatial rule. For example, let us include a binary variable for every two-digit postcode in Liverpool, indicating whether a given house is located within such area (`1`) or not (`0`). Mathematically, we are now fitting the following equation:
+
+$$
+\log{P_i} = \alpha_r + \beta_1 NEW_i + \beta_2 IMD_i + \epsilon_i
+$$
+
+where the main difference is that we are now allowing the constant term, $\alpha$, to vary by postcode $r$, $\alpha_r$.
+
+Programmatically, this is straightforward to estimate:
 
 ```{r}
 # Include `-1` to eliminate the constant term and include a dummy for every area
-m3 <- lm('log(price) ~ pc + new + log(imd_score) - 1', db)
+m3 <- lm('log(price) ~ pc + new + imd_score - 1', db)
 summary(m3)
 ```
 
-* Drops `L1` so it's with respect to L1
-* It compares houses within `L`
-* As a byproduct, it gives a measure of area desirability
+Econometrically speaking, what the postcode FE we have introduced imply is that, instead of comparing all house prices across Liverpool as equal, we only derive variation from within each postcode^[Additionally, estimating spatial FE in our particular example also gives you an indirect measure of area *desirability*: since they are simple dummies in a regression explaining the price of a house, their estimate tells us about how much people are willing to pay to live in a given area. However, this interpretation does not necessarily apply in other contexts where introducing spatial FEs does make sense. **EXERCISE** *What is the most desired area to live in Liverpool?*]. Remember that the interpretation of a $\beta_k$ coefficient is the effect of variable $k$, *given all the other explanatory variables included remain constant*. By including a single variable for each area, we are effectively forcing the model to compare as equal only house prices that share the same value for each variable; in other words, only houses located within the same area. Introducing FE affords you a higher degree of isolation of the effects of the variables you introduce in your model because you can control for unobserved effects that align spatially with the distribution of the FE you introduce (by postcode, in our case).
 
-**Spatial regimes**
+## Spatial regimes
 
-## Spatial dependence
+At the core of estimating spatial FEs is the idea that, instead of assuming the dependent variable behaves uniformly over space, there are systematic effects following a geographical pattern that affect its behaviour. In other words, spatial FEs introduce econometrically the notion of spatial heterogeneity. They do this in the simplest possible form: by allowing the constant term to vary geographically. The other elements of the regression are left untouched and hence apply uniformly across space. The idea of spatial regimes (SRs) is to generalize the spatial FE approach to allow not only the constant term to vary but also any other explanatory variable. This implies that the equation we will be estimating is:
 
-* Exogenous spatial effects
-* Point to further spatial regression (lag, error) --> Anselin (1988, 2003), plus Anselin & Rey (2015) for an in-depth treatment of modern approaches
+$$
+\log{P_i} = \alpha_r + \beta_{1r} NEW_i + \beta_{2r} IMD_i + \epsilon_i
+$$
+
+where we are not only allowing the constant term to vary by region ($\alpha_r$), but also every other parameter ($\beta_{kr}$).
+
+In R terms, this is more straightforward to estimate if `new` is expressed as `0` and `1`, rather than as factors:
+
+```{r}
+# Create a new variable `newB` to store the binary form of `new`
+db@data$newB <- 1
+db[db@data$new=='N', 'newB'] <- 0
+```
+
+Also, given we are going to allow *every* coefficient to vary by regime, we will need to explicitly set a constant term that we can allow to vary:
+
+```{r}
+db$one <- 1
+```
+
+Then, the estimation leverages the capabilities in model description of R formulas:
+
+```{r}
+# `:` notation implies interaction variables
+m4 <- lm('log(price) ~ 0 +(one + newB + imd_score):(pc)', db)
+summary(m4)
+```
+
+As we can see, there are a few `NA` values (e.g. `pcL10`). This has to do with the fact that there are not that many new houses, so some of the buckets in which the regimes split the data to estimate each parameter are empty. This can be readily seen by obtaining a quick cross tabulation of `pc` and `new`:
+
+```{r}
+table(db$pc, db$new)
+```
+
+To illustrate a correct regime estimation, we can focus only on `imd_score`^[Note this still returns a `NA` for the IMD estimate in `L20`. This is most likely due to the little amount of houses (five) sold in that area. The regression nevertheless serves the illustration]:
+
+```{r}
+# `:` notation implies interaction variables
+m5 <- lm('log(price) ~ 0 + (one + imd_score):pc', db)
+summary(m5)
+```
+
+This allows us to get a separate constant term and estimate of the impact of IMD on the price of a house *for every postcode*^[**PRO EXERCISE** *How does the effect of IMD vary over space?* You can answer this by looking at the coefficients of `imd_score` over postcodes, but it would be much clearer if you could create a choropleth of the house locations where each dot is colored based on the value of the `imd_score` estimated for that postcode.].
+
+# Spatial dependence
+
+As we have just discussed, SH is about effects of phenomena that are *explicitly linked* to geography and that hence cause spatial variation and clustering of values. This encompasses many of the kinds of spatial effects we may be interested in when we fit linear regressions. However, in other cases, our interest is on the effect of the *spatial configuration* of the observations, and the extent to which that has an effect on the outcome we are considering. For example, we might think that the price of a house not only depends on the level of deprivation where the house is located, but also whether is close to other highly deprived areas. This kind of spatial effect is fundamentally different from SH in that is it not related to inherent characteristics of the geography but relates to the characteristics of the observations in our dataset and, specially, to their spatial arrangement. We call this phenomenon by which the values of observations are related to each other through distance *spatial dependence* [@anselin1988spatial].
+
+## Spatial Weights
+
+There are several ways to introduce spatial dependence in an econometric framework, with varying degrees of econometric sophistication [see @anselin2003spatial for a good overview]. Common to all of them however is the way space is formally encapsulated: through *spatial weights matrices ($W$)*^[If you need to refresh your knowledge on spatial weight matrices, check [Lecture 5](http://darribas.org/gds15/notes/Class_05.html) of @darribas_gds15]. These are $NxN$ matrices with zero diagonals and every $w_{ij}$ cell with a value that represents the degree of spatial connectivity/interaction between observations $i$ and $j$. If they are not connected at all, $w_{ij}=0$, otherwise $w_{ij}>0$ and we call $i$ and $j$ neighbors. The exact value in the latter case depends on the criterium we use to define neighborhood relations. These matrices also tend to be row-standardized so the sum of each row equals to one.
+
+A related concept to spatial weight matrices is that of *spatial lag*. This is an operator that multiplies a given variable $y$ by a spatial weight matrix:
+
+$$
+y_{lag} = W y
+$$
+
+If $W$ is row-standardized, $y_{lag}$ is effectively the average value of $y$ in the neighborhood of each observation. The individual notation may help clarify this:
+
+$$
+y_{lag-i} = \displaystyle \sum_j w_{ij} y_j
+$$
+
+where $y_{lag-i}$ is the spatial lag of variable $y$ at location $i$, and $j$ sums over the entire dataset. If $W$ is row-standardized, $y_{lag-i}$ becomes an average of $y$ weighted by the spatial criterium defined in $W$.
+
+Given that spatial weights matrices are not the focus of this tutorial, we will stick to a very simple case. Since we are dealing with points, we will use $K$-nn weights, which take the $k$ nearest neighbors of each observation as neighbors and assign a value of one, assigning everyone else a zero. We will use $k=150$ to get a good degree of variation and sensible results. If your computer is struggles to compute the following lines of code, you can replace 50 by a lowed number. Technically speaking is the same thing, but the probability that you will pick up only houses in the same LSOA (and hence with exactly the same IMD score) will be higher.
+
+```{r}
+# Because some rows are different units on the same house, slightly
+# jitter the locations to break ties
+xy.jit <- jitter(db@coords)
+# Create knn list of each house
+hnn <- knearneigh(xy.jit, k=50)
+# Create nb object
+hnb <- knn2nb(hnn)
+# Create spatial weights matrix (note it row-standardizes by default)
+hknn <- nb2listw(hnb)
+```
+
+We can inspect the weights created by simply typing the name of the object:
+
+```{r}
+hknn
+```
+
+## Exogenous spatial effects
+
+Let us come back to the house price example we have been working with. So far, we have hypothesized that the price of a house sold in Liverpool can be explained using information about whether it is newly built, the level of deprivation of the area where it is located, and its postcode. However, it is also reasonable to think that prospective house owners care about the larger area around a house, not only about its immediate surroundings, and would be willing to pay more for a house that was close to nicer areas, everything else being equal. How could we test this idea?
+
+The most straightforward way to introduce spatial dependence in a regression is by considering not only a given explanatory variable, but also its spatial lag. In our example case, in addition to including the level of deprivation in the area of the house, we will include its spatial lag. In other words, we will be saying that it is not only the level of deprivation of the area where a house is located but also that of the surrounding locations that helps explain the final price at which a house is sold. Mathematically, this implies estimating the following model:
+
+$$
+\log{P_i} = \alpha + \beta_{1} NEW_i + \beta_{2} IMD_i + \beta_{3} IMD_{lag-i} + \epsilon_i
+$$
+
+Let us first compute the spatial lag of imd_score:
+
+```{r}
+db@data$w_imd_score <- lag.listw(hknn, db@data$imd_score)
+```
+
+And then we can include it in our previous specification. Note that we apply the log to the lag, not the reverse:
+
+```{r}
+# `:` notation implies interaction variables
+m6 <- lm('log(price) ~ new + imd_score + w_imd_score', db)
+summary(m6)
+```
+
+As we can see, the lag is not only significative and negative (as expected), but its effect seems to be even larger that that of the house itself. Taken literally, this would imply that prospective owners value more the area of the surrounding houses than that of the actual house they buy. However, it is important to remember how these variables have been constructed and what they really represent. Because the IMD score is not exactly calculated at the house level, but at the area level, many of the surrounding houses will share that so, to some extent, the IMD of neighboring houses is that of the house itself^[**EXERCISE** *How do results change if you modify the number of neighbors included to compute the $K$-nn spatial weight matrix?* Replace the originak $k$ used and re-run the regressions. Try to interpret the results and the (potential) differences with the original ones.]. This is likely to be affecting the final parameter, and it is a reminder and an illustration that we cannot take model results as universal truth but we need to use them as tools to inform analysis, couple with theory and what we know about the particular question of analysis. Nevertheless, the example does illustrate how to introduce spatial dependence in a regression framework in a fairly straight forward way.
+
+## A note on more advanced spatial regression
+
+Introducing a spatial lag of an explanatory variable, as we have just seen, is the most straightforward way of incorporating the notion of spatial dependence in a linear regression framework. It does not require additional changes, it can be estimated with OLS, and the interpretation is rather similar to interpreting non-spatial variables. The field of spatial econometrics however is a much broader one and has produced over the last decades many techniques to deal with spatial effects and spatial dependence in different ways. Although this might be an over simplification, one can say that most of such efforts for the case of a single cross-section are focused on two main variations: the spatial lag and the spatial error model. Both are similar to the case we have seen in that they are based on the introduction of a spatial lag, but they differ in the component of the model they modify and affect.
+
+The spatial lag model introduces a spatial lag of the *dependent* variable. In the example we have covered, this would translate into:
+
+$$
+\log{P_i} = \alpha + \rho \log{P_{lag-i}} + \beta_{1} NEW_i + \beta_{2} IMD_i + \epsilon_i
+$$
+
+Although it might not seem very different from the previous equation, this model violates the exogeneity assumption, crucial for OLS to work.
+
+Equally, the spatial error model includes a spatial lag in the *error* term of the equation:
+
+$$
+\log{P_i} = \alpha + \beta_{1r} NEW_i + \beta_{2r} IMD_i + u_i
+$$
+
+$$
+u_i = u_{lag-i} + \epsilon_i
+$$
+
+Again, although similar, one can show this specification violates the assumptions about the error term in a classical OLS model.
+
+Both the spatial lag and error model violate some of the assumptions on which OLS relies and thus render the technique unusable. Much of the efforts have thus focused on coming up with alternative methodologies that allow unbiased, robust, and efficient estimation of such models. A survey of those is beyond the scope of this note, but the interested reader is referred to @anselin1988spatial, @anselin2003spatial, and @anselin2014modern for further reference.
 
 # Predicting house prices
 
 * Show how to obtain a prediction for a given house
 * Compare the estimate with that of interpolation?
+
+# To Do
+
+* Extract new house price dataset for a different month
 
 # References
