@@ -515,8 +515,8 @@ hknn &lt;- nb2listw(hnb)</code></pre>
 ## 
 ## Weights style: W 
 ## Weights constants summary:
-##      n       nn   S0       S1       S2
-## W 6324 39992976 6324 230.4888 25812.88</code></pre>
+##      n       nn   S0      S1       S2
+## W 6324 39992976 6324 230.436 25813.49</code></pre>
 </div>
 <div id="exogenous-spatial-effects" class="section level2">
 <h2>Exogenous spatial effects</h2>
@@ -537,14 +537,14 @@ summary(m6)</code></pre>
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -4.2906 -0.3017 -0.0152  0.2817  5.2631 
+## -4.2906 -0.3017 -0.0153  0.2816  5.2605 
 ## 
 ## Coefficients:
 ##               Estimate Std. Error t value Pr(&gt;|t|)    
-## (Intercept) 12.2811377  0.0145276 845.365  &lt; 2e-16 ***
-## newY         0.2476012  0.0195192  12.685  &lt; 2e-16 ***
-## imd_score   -0.0042357  0.0008914  -4.752 2.06e-06 ***
-## w_imd_score -0.0147839  0.0009682 -15.270  &lt; 2e-16 ***
+## (Intercept) 12.2812289  0.0145302 845.223  &lt; 2e-16 ***
+## newY         0.2475766  0.0195194  12.684  &lt; 2e-16 ***
+## imd_score   -0.0042391  0.0008913  -4.756 2.02e-06 ***
+## w_imd_score -0.0147834  0.0009683 -15.267  &lt; 2e-16 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
@@ -586,12 +586,12 @@ u_i = u_{lag-i} + \epsilon_i
 <p>To obtain the prediction for its price, we can use the <code>predict</code> method:</p>
 <pre class="r"><code>new.price &lt;- predict(m6, new.house)
 new.price</code></pre>
-<pre><code>##        1 
-## 11.47187</code></pre>
+<pre><code>##       1 
+## 11.4717</code></pre>
 <p>Now remember we were using the log of the price as dependent variable. If we want to recover the actual price of the house, we need to take its exponent:</p>
 <pre class="r"><code>exp(new.price)</code></pre>
 <pre><code>##        1 
-## 95977.31</code></pre>
+## 95961.66</code></pre>
 <p>According to our model, the house would be worth GBP96,060.29<label for="tufte-sn-13" class="margin-toggle sidenote-number">13</label><input type="checkbox" id="tufte-sn-13" class="margin-toggle"><span class="sidenote"><span class="sidenote-number">13</span> <strong>EXERCISE</strong> <em>How would the price change if the surrounding houses did not have an average of 50 but of 80?</em> Obtain a new prediction and compare it with the original one.</span>.</p>
 <div class="references">
 <h1 id="references" class="unnumbered">References</h1>
