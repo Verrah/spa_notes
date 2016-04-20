@@ -30,12 +30,12 @@ This session^[<a rel="license" href="http://creativecommons.org/licenses/by-nc-s
 
 This tutorial is part of [Spatial Analysis Notes](index.html), a compilation hosted as a GitHub repository that you can access it in a few ways:
 
-* As a [download](https://github.com/darribas/kde_idw_r/archive/master.zip) of a `.zip` file that contains all the materials.
+* As a [download](https://github.com/darribas/spa_notes/archive/master.zip) of a `.zip` file that contains all the materials.
 * As an [html
-  website](https://darribas.org/kde_idw_r/sp_eco.html).
+  website](http://darribas.org/spa_notes/sp_eco.html).
 * As a [pdf
-  document](https://github.com/darribas/kde_idw_r/raw/master/sp_eco_book.pdf)
-* As a [GitHub repository](https://github.com/darribas/kde_idw_r).
+  document](https://github.com/darribas/spa_notes/raw/master/sp_eco_book.pdf)
+* As a [GitHub repository](https://github.com/darribas/spa_notes).
 
 
 # Dependencies
@@ -66,7 +66,7 @@ library(spdep)
 Before we start any analysis, let us set the path to the directory where we are working. We can easily do that with `setwd()`. Please replace in the following line the path to the folder where you have placed this file -and where the `house_transactions` folder with the data lives.
 
 ```{r}
-setwd('/Users/dani/AAA/Documents/teaching/u-lvl/2016/envs453/code/GIT/kde_idw_r/')
+setwd('/media/dani/baul/AAA/Documents/teaching/u-lvl/2016/envs453/code/GIT/kde_idw_r/')
 #setwd('.')
 ```
 

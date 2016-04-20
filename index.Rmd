@@ -30,12 +30,10 @@ This page^[<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4
 These notes are hosted as a GitHub repository and you can access it in a few
 ways:
 
-* As a [download](https://github.com/darribas/kde_idw_r/archive/master.zip) of a `.zip` file that contains all the materials.
+* As a [download](https://github.com/darribas/spa_notes/archive/master.zip) of a `.zip` file that contains all the materials.
 * As an [html
-  website](https://github.com/darribas/kde_idw_r/archive/master.zip).
-* As a [pdf
-  document](https://github.com/darribas/kde_idw_r/raw/master/points_book.pdf)
-* As a [GitHub repository](https://github.com/darribas/kde_idw_r).
+  website](http://darribas.org/spa_notes/).
+* As a [GitHub repository](https://github.com/darribas/spa_notes).
 
 # Dependencies
 
