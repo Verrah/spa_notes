@@ -32,7 +32,7 @@ This tutorial is part of [Spatial Analysis Notes](index.html), a compilation hos
 
 * As a [download](https://github.com/darribas/spa_notes/archive/master.zip) of a `.zip` file that contains all the materials.
 * As an [html
-  website](https://darribas.org/spa_notes/points.html).
+  website](http://darribas.org/spa_notes/points.html).
 * As a [pdf
   document](https://github.com/darribas/spa_notes/raw/master/points_book.pdf)
 * As a [GitHub repository](https://github.com/darribas/spa_notes).
