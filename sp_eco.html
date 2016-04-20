@@ -516,7 +516,7 @@ hknn &lt;- nb2listw(hnb)</code></pre>
 ## Weights style: W 
 ## Weights constants summary:
 ##      n       nn   S0      S1       S2
-## W 6324 39992976 6324 230.436 25813.49</code></pre>
+## W 6324 39992976 6324 230.488 25813.71</code></pre>
 </div>
 <div id="exogenous-spatial-effects" class="section level2">
 <h2>Exogenous spatial effects</h2>
@@ -537,19 +537,19 @@ summary(m6)</code></pre>
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -4.2906 -0.3017 -0.0153  0.2816  5.2605 
+## -4.2906 -0.3013 -0.0153  0.2822  5.2631 
 ## 
 ## Coefficients:
 ##               Estimate Std. Error t value Pr(&gt;|t|)    
-## (Intercept) 12.2812289  0.0145302 845.223  &lt; 2e-16 ***
-## newY         0.2475766  0.0195194  12.684  &lt; 2e-16 ***
-## imd_score   -0.0042391  0.0008913  -4.756 2.02e-06 ***
-## w_imd_score -0.0147834  0.0009683 -15.267  &lt; 2e-16 ***
+## (Intercept) 12.2813856  0.0145275  845.39  &lt; 2e-16 ***
+## newY         0.2475107  0.0195174   12.68  &lt; 2e-16 ***
+## imd_score   -0.0041991  0.0008915   -4.71 2.53e-06 ***
+## w_imd_score -0.0148266  0.0009684  -15.31  &lt; 2e-16 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 0.5201 on 6320 degrees of freedom
-## Multiple R-squared:  0.3347, Adjusted R-squared:  0.3344 
+## Residual standard error: 0.52 on 6320 degrees of freedom
+## Multiple R-squared:  0.3348, Adjusted R-squared:  0.3345 
 ## F-statistic:  1060 on 3 and 6320 DF,  p-value: &lt; 2.2e-16</code></pre>
 <p>As we can see, the lag is not only significative and negative (as expected), but its effect seems to be even larger that that of the house itself. Taken literally, this would imply that prospective owners value more the area of the surrounding houses than that of the actual house they buy. However, it is important to remember how these variables have been constructed and what they really represent. Because the IMD score is not exactly calculated at the house level, but at the area level, many of the surrounding houses will share that so, to some extent, the IMD of neighboring houses is that of the house itself<label for="tufte-sn-12" class="margin-toggle sidenote-number">12</label><input type="checkbox" id="tufte-sn-12" class="margin-toggle"><span class="sidenote"><span class="sidenote-number">12</span> <strong>EXERCISE</strong> <em>How do results change if you modify the number of neighbors included to compute the <span class="math">\(K\)</span>-nn spatial weight matrix?</em> Replace the originak <span class="math">\(k\)</span> used and re-run the regressions. Try to interpret the results and the (potential) differences with the original ones.</span>. This is likely to be affecting the final parameter, and it is a reminder and an illustration that we cannot take model results as universal truth but we need to use them as tools to inform analysis, couple with theory and what we know about the particular question of analysis. Nevertheless, the example does illustrate how to introduce spatial dependence in a regression framework in a fairly straight forward way.</p>
 </div>
@@ -586,12 +586,12 @@ u_i = u_{lag-i} + \epsilon_i
 <p>To obtain the prediction for its price, we can use the <code>predict</code> method:</p>
 <pre class="r"><code>new.price &lt;- predict(m6, new.house)
 new.price</code></pre>
-<pre><code>##       1 
-## 11.4717</code></pre>
+<pre><code>##        1 
+## 11.47263</code></pre>
 <p>Now remember we were using the log of the price as dependent variable. If we want to recover the actual price of the house, we need to take its exponent:</p>
 <pre class="r"><code>exp(new.price)</code></pre>
 <pre><code>##        1 
-## 95961.66</code></pre>
+## 96051.03</code></pre>
 <p>According to our model, the house would be worth GBP96,060.29<label for="tufte-sn-13" class="margin-toggle sidenote-number">13</label><input type="checkbox" id="tufte-sn-13" class="margin-toggle"><span class="sidenote"><span class="sidenote-number">13</span> <strong>EXERCISE</strong> <em>How would the price change if the surrounding houses did not have an average of 50 but of 80?</em> Obtain a new prediction and compare it with the original one.</span>.</p>
 <div class="references">
 <h1 id="references" class="unnumbered">References</h1>
