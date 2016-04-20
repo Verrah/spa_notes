@@ -360,11 +360,37 @@ Both the spatial lag and error model violate some of the assumptions on which OL
 
 # Predicting house prices
 
-* Show how to obtain a prediction for a given house
-* Compare the estimate with that of interpolation?
+So far, we have seen how exploit the output of a regression model to evaluate the role different variables play in explaining another one of interest. However, once fit, a model can also be used to obtain predictions of the dependent variable given a new set of values for the explanatory variables. We will finish this session by dipping our toes in predicting with linear models.
 
-# To Do
+The core idea is that once you have estimates for the way in which the explanatory variables can be combined to explain the dependent one, you can plug new values on the explanatory side of the model and combine them following the model estimates to obtain predictions. In the example we have worked with, you can imagine this application would be useful to obtain valuations of a house, given we know the IMD of the area where the house is located and whether it is a newly built house or not.
 
-* Extract new house price dataset for a different month
+Conceptually, predicting in linear regression models involves using the estimates of the parameters to obtain a value for the dependent variable:
+
+$$
+\bar{\log{P_i}} = \bar{\alpha} + \bar{\beta_{1r}} NEW_i^* + \bar{\beta_{2r}} IMD_i^*
+$$
+
+where $\bar{\log{P_i}}$ is our predicted value, and we include the $\bar{}$ sign to note that it is our estimate obtained from fitting the model. We use the $^*$ sign to note that those can be new values for the explanatory variables, not necessarily those used to fit the model.
+
+Technically speaking, prediction in linear models is fairly streamlined in R. Suppose we are given data for a new house which is to be put in the market. We know it is been newly built on an area with an IMD score of 75, but surrounded by areas that, on average, have a score of 50. Let us record the data first:
+
+```{r}
+new.house <- data.frame(new='Y', imd_score=75, w_imd_score=50)
+```
+
+To obtain the prediction for its price, we can use the `predict` method:
+
+```{r}
+new.price <- predict(m6, new.house)
+new.price
+```
+
+Now remember we were using the log of the price as dependent variable. If we want to recover the actual price of the house, we need to take its exponent:
+
+```{r}
+exp(new.price)
+```
+
+According to our model, the house would be worth GBP96,060.29^[**EXERCISE** *How would the price change if the surrounding houses did not have an average of 50 but of 80?* Obtain a new prediction and compare it with the original one.].
 
 # References

@@ -11,7 +11,7 @@
 
 <meta name="author" content="Dani Arribas-Bel" />
 
-<meta name="date" content="2016-04-19" />
+<meta name="date" content="2016-04-20" />
 
 <title>Spatial Econometrics</title>
 
@@ -43,7 +43,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <h1 class="title">Spatial Econometrics</h1>
 <h3 class="subtitle"><em>An Introduction to Spatial Regression</em></h3>
 <h4 class="author"><em>Dani Arribas-Bel</em></h4>
-<h4 class="date"><em>2016-04-19</em></h4>
+<h4 class="date"><em>2016-04-20</em></h4>
 
 </div>
 
@@ -69,44 +69,19 @@ library(tufte)
 # For pretty table
 library(knitr)
 # Spatial Data management
-library(rgdal)</code></pre>
-<pre><code>## Loading required package: sp</code></pre>
-<pre><code>## rgdal: version: 1.0-4, (SVN revision 548)
-##  Geospatial Data Abstraction Library extensions to R successfully loaded
-##  Loaded GDAL runtime: GDAL 1.11.2, released 2015/02/10
-##  Path to GDAL shared files: /Library/Frameworks/R.framework/Versions/3.2/Resources/library/rgdal/gdal
-##  Loaded PROJ.4 runtime: Rel. 4.9.1, 04 March 2015, [PJ_VERSION: 491]
-##  Path to PROJ.4 shared files: /Library/Frameworks/R.framework/Versions/3.2/Resources/library/rgdal/proj
-##  Linking to sp version: 1.1-1</code></pre>
-<pre class="r"><code># Pretty graphics
+library(rgdal)
+# Pretty graphics
 library(ggplot2)
 # Pretty maps
 library(ggmap)
 # Various GIS utilities
-library(GISTools)</code></pre>
-<pre><code>## Loading required package: maptools</code></pre>
-<pre><code>## Checking rgeos availability: TRUE</code></pre>
-<pre><code>## 
-## Attaching package: 'maptools'</code></pre>
-<pre><code>## The following object is masked from 'package:sp':
-## 
-##     nowrapSpatialLines</code></pre>
-<pre><code>## Loading required package: RColorBrewer</code></pre>
-<pre><code>## Loading required package: MASS</code></pre>
-<pre><code>## Loading required package: rgeos</code></pre>
-<pre><code>## rgeos version: 0.3-11, (SVN revision 479)
-##  GEOS runtime version: 3.4.2-CAPI-1.8.2 r3921 
-##  Linking to sp version: 1.1-0 
-##  Polygon checking: TRUE</code></pre>
-<pre><code>## Warning: replacing previous import 'maptools::nowrapSpatialLines' by
-## 'sp::nowrapSpatialLines' when loading 'GISTools'</code></pre>
-<pre class="r"><code># For all your interpolation needs
+library(GISTools)
+# For all your interpolation needs
 library(gstat)
 # For data manipulation
 library(plyr)
 # Spatial regression
 library(spdep)</code></pre>
-<pre><code>## Loading required package: Matrix</code></pre>
 <p>Before we start any analysis, let us set the path to the directory where we are working. We can easily do that with <code>setwd()</code>. Please replace in the following line the path to the folder where you have placed this file -and where the <code>house_transactions</code> folder with the data lives.</p>
 <pre class="r"><code>setwd('/Users/dani/AAA/Documents/teaching/u-lvl/2016/envs453/code/GIT/kde_idw_r/')
 #setwd('.')</code></pre>
@@ -539,8 +514,8 @@ hknn &lt;- nb2listw(hnb)</code></pre>
 ## 
 ## Weights style: W 
 ## Weights constants summary:
-##      n       nn   S0       S1       S2
-## W 6324 39992976 6324 230.5392 25810.08</code></pre>
+##      n       nn   S0      S1       S2
+## W 6324 39992976 6324 230.504 25814.26</code></pre>
 </div>
 <div id="exogenous-spatial-effects" class="section level2">
 <h2>Exogenous spatial effects</h2>
@@ -561,20 +536,20 @@ summary(m6)</code></pre>
 ## 
 ## Residuals:
 ##     Min      1Q  Median      3Q     Max 
-## -4.2906 -0.3019 -0.0152  0.2818  5.2606 
+## -4.2906 -0.3015 -0.0153  0.2821  5.2632 
 ## 
 ## Coefficients:
 ##               Estimate Std. Error t value Pr(&gt;|t|)    
-## (Intercept) 12.2811710  0.0145291 845.281  &lt; 2e-16 ***
-## newY         0.2475382  0.0195194  12.682  &lt; 2e-16 ***
-## imd_score   -0.0042265  0.0008922  -4.737 2.21e-06 ***
-## w_imd_score -0.0147942  0.0009692 -15.265  &lt; 2e-16 ***
+## (Intercept) 12.2810286  0.0145286 845.301  &lt; 2e-16 ***
+## newY         0.2474979  0.0195203  12.679  &lt; 2e-16 ***
+## imd_score   -0.0042497  0.0008917  -4.766 1.92e-06 ***
+## w_imd_score -0.0147677  0.0009686 -15.246  &lt; 2e-16 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Residual standard error: 0.5201 on 6320 degrees of freedom
-## Multiple R-squared:  0.3347, Adjusted R-squared:  0.3344 
-## F-statistic:  1060 on 3 and 6320 DF,  p-value: &lt; 2.2e-16</code></pre>
+## Multiple R-squared:  0.3346, Adjusted R-squared:  0.3343 
+## F-statistic:  1059 on 3 and 6320 DF,  p-value: &lt; 2.2e-16</code></pre>
 <p>As we can see, the lag is not only significative and negative (as expected), but its effect seems to be even larger that that of the house itself. Taken literally, this would imply that prospective owners value more the area of the surrounding houses than that of the actual house they buy. However, it is important to remember how these variables have been constructed and what they really represent. Because the IMD score is not exactly calculated at the house level, but at the area level, many of the surrounding houses will share that so, to some extent, the IMD of neighboring houses is that of the house itself<label for="tufte-sn-12" class="margin-toggle sidenote-number">12</label><input type="checkbox" id="tufte-sn-12" class="margin-toggle"><span class="sidenote"><span class="sidenote-number">12</span> <strong>EXERCISE</strong> <em>How do results change if you modify the number of neighbors included to compute the <span class="math inline">\(K\)</span>-nn spatial weight matrix?</em> Replace the originak <span class="math inline">\(k\)</span> used and re-run the regressions. Try to interpret the results and the (potential) differences with the original ones.</span>. This is likely to be affecting the final parameter, and it is a reminder and an illustration that we cannot take model results as universal truth but we need to use them as tools to inform analysis, couple with theory and what we know about the particular question of analysis. Nevertheless, the example does illustrate how to introduce spatial dependence in a regression framework in a fairly straight forward way.</p>
 </div>
 <div id="a-note-on-more-advanced-spatial-regression" class="section level2">
@@ -598,16 +573,25 @@ u_i = u_{lag-i} + \epsilon_i
 </div>
 <div id="predicting-house-prices" class="section level1">
 <h1>Predicting house prices</h1>
-<ul>
-<li>Show how to obtain a prediction for a given house</li>
-<li>Compare the estimate with that of interpolation?</li>
-</ul>
-</div>
-<div id="to-do" class="section level1">
-<h1>To Do</h1>
-<ul>
-<li>Extract new house price dataset for a different month</li>
-</ul>
+<p>So far, we have seen how exploit the output of a regression model to evaluate the role different variables play in explaining another one of interest. However, once fit, a model can also be used to obtain predictions of the dependent variable given a new set of values for the explanatory variables. We will finish this session by dipping our toes in predicting with linear models.</p>
+<p>The core idea is that once you have estimates for the way in which the explanatory variables can be combined to explain the dependent one, you can plug new values on the explanatory side of the model and combine them following the model estimates to obtain predictions. In the example we have worked with, you can imagine this application would be useful to obtain valuations of a house, given we know the IMD of the area where the house is located and whether it is a newly built house or not.</p>
+<p>Conceptually, predicting in linear regression models involves using the estimates of the parameters to obtain a value for the dependent variable:</p>
+<p><span class="math display">\[
+\bar{\log{P_i}} = \bar{\alpha} + \bar{\beta_{1r}} NEW_i^* + \bar{\beta_{2r}} IMD_i^*
+\]</span></p>
+<p>where <span class="math inline">\(\bar{\log{P_i}}\)</span> is our predicted value, and we include the <span class="math inline">\(\bar{}\)</span> sign to note that it is our estimate obtained from fitting the model. We use the <span class="math inline">\(^*\)</span> sign to note that those can be new values for the explanatory variables, not necessarily those used to fit the model.</p>
+<p>Technically speaking, prediction in linear models is fairly streamlined in R. Suppose we are given data for a new house which is to be put in the market. We know it is been newly built on an area with an IMD score of 75, but surrounded by areas that, on average, have a score of 50. Let us record the data first:</p>
+<pre class="r"><code>new.house &lt;- data.frame(new='Y', imd_score=75, w_imd_score=50)</code></pre>
+<p>To obtain the prediction for its price, we can use the <code>predict</code> method:</p>
+<pre class="r"><code>new.price &lt;- predict(m6, new.house)
+new.price</code></pre>
+<pre><code>##        1 
+## 11.47141</code></pre>
+<p>Now remember we were using the log of the price as dependent variable. If we want to recover the actual price of the house, we need to take its exponent:</p>
+<pre class="r"><code>exp(new.price)</code></pre>
+<pre><code>##        1 
+## 95933.77</code></pre>
+<p>According to our model, the house would be worth GBP96,060.29<label for="tufte-sn-13" class="margin-toggle sidenote-number">13</label><input type="checkbox" id="tufte-sn-13" class="margin-toggle"><span class="sidenote"><span class="sidenote-number">13</span> <strong>EXERCISE</strong> <em>How would the price change if the surrounding houses did not have an average of 50 but of 80?</em> Obtain a new prediction and compare it with the original one.</span>.</p>
 </div>
 <div id="references" class="section level1 references unnumbered">
 <h1>References</h1>
