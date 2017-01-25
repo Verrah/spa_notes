@@ -4,7 +4,8 @@ subtitle: "An Introduction to Spatial Regression"
 author: "Dani Arribas-Bel"
 date: "`r Sys.Date()`"
 output:
-  tufte::tufte_html: default
+  tufte::tufte_html:
+      css: extra.css
   tufte::tufte_handout:
     citation_package: natbib
     latex_engine: xelatex
@@ -66,8 +67,8 @@ library(spdep)
 Before we start any analysis, let us set the path to the directory where we are working. We can easily do that with `setwd()`. Please replace in the following line the path to the folder where you have placed this file -and where the `house_transactions` folder with the data lives.
 
 ```{r}
-setwd('/media/dani/baul/AAA/Documents/teaching/u-lvl/2016/envs453/code/GIT/kde_idw_r/')
-#setwd('.')
+#setwd('/media/dani/baul/AAA/Documents/teaching/u-lvl/2016/envs453/code/GIT/kde_idw_r/')
+setwd('.')
 ```
 
 # Data
@@ -92,7 +93,7 @@ The meaning for most of the variables can be found in the original [Land Registr
 # Format dates
 dts <- as.Date(hst@data$trans_date)
 # Set up summary table
-tab <- summary(dts)[c('Min.', 'Max.')]
+tab <- summary(dts)
 tab
 ```
 
@@ -119,6 +120,12 @@ The resulting table, `db`, contains variables from both original tables:
 
 ```{r}
 names(db)
+```
+
+Since we will heavily rely on `price`, we need to turn it into a numeric column, rather than as a factor, which is how it is picked up:
+
+```{r}
+db@data$price <- as.numeric(as.character(db@data$price))
 ```
 
 For some of our analysis, we will need the coarse postcode of each house, rather than the finely specified one in the original data. This means using the available one
