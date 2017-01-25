@@ -4,7 +4,8 @@ subtitle: "Kernel Density Estimation and Spatial Interpolation"
 author: "Dani Arribas-Bel"
 date: "`r Sys.Date()`"
 output:
-  tufte::tufte_html: default
+  tufte::tufte_html:
+      css: extra.css
   tufte::tufte_handout:
     citation_package: natbib
     latex_engine: xelatex
@@ -50,6 +51,8 @@ library(knitr)
 library(rgdal)
 # Pretty graphics
 library(ggplot2)
+# Thematic maps
+library(tmap)
 # Pretty maps
 library(ggmap)
 # Various GIS utilities
@@ -77,13 +80,19 @@ Let us start by reading the data, which comes in a shapefile:
 db <- readOGR(dsn = 'house_transactions', layer = 'liv_house_trans')
 ```
 
+Before we forget, let us make sure `price` is considered a number, not a factor:
+
+```{r}
+db@data$price <- as.numeric(as.character((db@data$price)))
+```
+
 The dataset spans the year 2014:
 
 ```{r}
 # Format dates
 dts <- as.Date(db@data$trans_date)
 # Set up summary table
-tab <- summary(dts)[c('Min.', 'Max.')]
+tab <- summary(dts)
 tab
 ```
 
@@ -103,11 +112,7 @@ The rest of this session will focus on two main elements of the shapefile: the s
 
 ```{r, fig.margin = TRUE, fig.cap = 'Raw house prices in Liverpool'}
 # Create the histogram
-hist <- qplot(data=db@data,x=price,
-              bins=150)
-# Change the background to go with the HTML color
-histplot <- hist + 
-  theme(plot.background = element_rect(fill = '#fffff8'))
+hist <- qplot(data=db@data,x=price)
 histplot
 ```
 
@@ -115,14 +120,10 @@ This basically shows there is a lot of values concentrated around the lower end 
 
 ```{r, fig.margin = TRUE, fig.cap = 'Log of house price in Liverpool'}
 # Create log and add it to the table
-logpr <- log(db@data$price)
+logpr <- log(as.numeric(db@data$price))
 db@data['logpr'] <- logpr
 # Create the histogram
-hist <- qplot(x=logpr,
-              bins=50)
-# Change the background to go with the HTML color
-histplot <- hist + 
-  theme(plot.background = element_rect(fill = '#fffff8'))
+hist <- qplot(x=logpr)
 histplot
 ```
 
@@ -149,10 +150,7 @@ hist <- base +
 # Overlay density plot
 kde <- hist + 
   geom_density(fill="#FF6666", alpha=0.5, colour="#FF6666")
-# Change the background to go with the HTML color
-final <- kde + 
-  theme(plot.background = element_rect(fill = '#fffff8'))
-final
+kde
 ```
 
 The key idea is that we are smoothing out the discrete binning that the histogram involves. Note how the histogram is exactly the same as above shape-wise, but it has been rescalend on the Y axis to reflect probabilities rather than counts.
@@ -173,10 +171,7 @@ base <- ggplot(data=db@data, aes(x=X, y=Y))
 kde <- base + stat_density2d(aes(x = X, y = Y, alpha = ..level..), 
                size = 0.01, bins = 16, geom = 'polygon') +
             scale_fill_gradient()
-# Change the background to go with the HTML color
-final <- kde + 
-  theme(plot.background = element_rect(fill = '#fffff8'))
-final
+kde
 ```
 
 Or, we can use a package such as the `GISTools`, which allows to pass a spatial object directly:
@@ -204,7 +199,7 @@ liv <- c(left = min(xys$lon), bottom = min(xys$lat),
 basemap <- get_stamenmap(liv, zoom = 12, 
                          maptype = "toner-lite")
 # Overlay KDE
-final <- ggmap(basemap, extent = "panel", 
+final <- ggmap(basemap, extent = "device", 
                maprange=FALSE) +
   stat_density2d(data = db_wgs84@data, 
                 aes(x = lon, y = lat, 
@@ -216,11 +211,6 @@ final <- ggmap(basemap, extent = "panel",
   scale_fill_gradient2("Transaction\nDensity", 
                        low = "#fffff8", 
                        high = "#8da0cb")
-# Change the background to go with the HTML color
-final <- final + 
-  theme(plot.background = element_rect(fill = '#fffff8'),
-        legend.background = element_rect(fill = '#fffff8'),
-        plot.background = element_rect(fill = '#fffff8'))
 final
 ```
 
@@ -266,7 +256,7 @@ On to the IDW. Again, this is hugely simplified by `gstat`:
 idw.hp <- idw(price ~ 1, locations=db, newdata=liv.grid)
 ```
 
-Boom! We've got it. Let us pause for a second to see how we just did it. First, we pass `price ~ 1`. This specifies the formula we are using to model house prices. The name on the left of `~` represents the variable we want to explain, while everything to its right captures the *explanatory* variables. Since we are considering the simplest possible case, we do not have further variables to add, so we simply write `1`. Then we specify the original locations for which we do have house prices (our original `db` object), and the points where we want to interpolate the house prices (the `liv.grid` object we just created above). One more note: by default, `idw.hp` uses all the available observations, weighted by distance, to provide an estimate for a given point. If you want to modify that and restrict the maximum number of neighbors to consider, you need to tweak the argument `nmax`.
+Boom! We've got it. Let us pause for a second to see how we just did it. First, we pass `price ~ 1`. This specifies the formula we are using to model house prices. The name on the left of `~` represents the variable we want to explain, while everything to its right captures the *explanatory* variables. Since we are considering the simplest possible case, we do not have further variables to add, so we simply write `1`. Then we specify the original locations for which we do have house prices (our original `db` object), and the points where we want to interpolate the house prices (the `liv.grid` object we just created above). One more note: by default, `idw.hp` uses all the available observations, weighted by distance, to provide an estimate for a given point. If you want to modify that and restrict the maximum number of neighbors to consider, you need to tweak the argument `nmax`, as we do above by using the 150 neares observations to each point^[Have a play with this because the results do change significantly. Can you reason why?].
 
 The object we get from `idw` is another spatial table, just as `db`, containing the interpolated values. As such, we can inspect it just as with any other of its kind. For example, to check out the top of the estimated table:
 
@@ -290,7 +280,32 @@ Once we have the IDW object computed, we can plot it to explore the distribution
 spplot(idw.hp['var1.pred'])
 ```
 
-However, this is not entirely satisfactory for a number of reasons. First, it is not really a surface, but a quick representation of the points we have just estimated. To solve this, we need to do an interim transformation to convert the spatial object `idw.hp` into a table that a "surface plotter" can understand.
+However, this is not entirely satisfactory for a number of reasons. Let us get an equivalen plot with the package `tmap`, which streamlines some of this and makes more aesthetically pleasant maps easier to build as it follows a "ggplot-y" approach.
+
+```{r}
+# Load up the layer
+liv.otl <- readOGR('house_transactions', 'liv_outline')
+```
+
+The shape we will overlay looks like this:
+
+```{r, fig.margin=TRUE}
+qtm(liv.otl)
+```
+
+Now let's give it a first go!
+
+```{r}
+# 
+p = tm_shape(liv.otl) + tm_fill(col='black', alpha=1) +
+  tm_shape(idw.hp) + 
+  tm_symbols(col='var1.pred', size=0.1, alpha=0.25, 
+             border.lwd=0., palette='YlGn')
+p
+```
+
+
+The last two plots, however, are not really a surface, but a representation of the points we have just estimated. To create a surface, we need to do an interim transformation to convert the spatial object `idw.hp` into a table that a "surface plotter" can understand.
 
 ```{r}
 xyz <- data.frame(x=coordinates(idw.hp)[, 1], 
@@ -298,7 +313,7 @@ xyz <- data.frame(x=coordinates(idw.hp)[, 1],
                   z=idw.hp$var1.pred)
 ```
 
-Now we are ready to plot the surface in all its glory:
+Now we are ready to plot the surface as a contour:
 
 ```{r, fig.margin=TRUE, fig.cap = 'Contour of prices in Liverpool'}
 base <- ggplot(data=xyz, aes(x=x, y=y))
@@ -306,16 +321,11 @@ surface <- base + geom_contour(aes(z=z))
 surface
 ```
 
-This is a bit better but, arguably, not perfect yet. To build a more compelling visualization, we need to introduce a few more lines of code:
+Which can also be shown as a filled contour:
 
-```{r, fig.margin=TRUE, fig.cap = 'Surface of prices in Liverpool'}
+```{r}
 base <- ggplot(data=xyz, aes(x=x, y=y))
-surface <- base +
-           geom_raster(aes(fill=z, alpha=z)) +
-           scale_fill_gradient2("Transaction\nDensity", 
-                       low = "#fffff8", 
-                       high = "#9b59b6") +
-          geom_contour(aes(z=z), colour='#9b59b6')
+surface <- base + geom_raster(aes(fill=z))
 surface
 ```
 
@@ -327,65 +337,16 @@ qplot(data=xyz, x=z, geom='density')
 
 Let us then take the logarithm before we plot the surface:
 
-```{r, fig.margin=TRUE, fig.cap = 'Surface of log-prices in Liverpool'}
+```{r, fig.fullwidth=TRUE, fig.cap = 'Surface of log-prices in Liverpool'}
 xyz['lz'] <- log(xyz$z)
 base <- ggplot(data=xyz, aes(x=x, y=y))
 surface <- base +
-           geom_raster(aes(fill=lz, alpha=lz),
-                       show.legend = FALSE) +
-           scale_fill_gradient2(low = "#fffff8", 
-                       high = "#66c2a5") +
-           theme(legend.position = "none") 
-final <- surface + 
-  theme(plot.background = element_rect(fill = '#fffff8'),
-        legend.background = element_rect(fill = '#fffff8'),
-        plot.background = element_rect(fill = '#fffff8'))
-final
+           geom_raster(aes(fill=lz),
+                       show.legend = F)
+surface
 ```
 
-Now this looks better. We can already start to tell some patterns. To bring in context, it would be great to be able to add a basemap layer, as we did for the KDE. This is conceptually very similar to what we did above, starting by reprojecting the points and continuing by overlaying them on top of the basemap. However, technically speak it is not possible because `ggmap` --the library we have been using to display tiles from cloud providers-- does not play well with our own rasters (i.e. the price surface). For that reason, we will use an alternative basemap to provide context. In particular, we will overlay a shapefile that contains the outline of the local authority of Liverpool. 
-
-Let us first load up the new shapefile and process it to display it^[Instructions to process it are based on [this tutorial](https://github.com/hadley/ggplot2/wiki/plotting-polygon-shapefiles) by Hadley Wickham.]:
-
-```{r}
-# Load up the layer
-liv.otl <- readOGR('house_transactions', 'liv_outline')
-# Assign the row names as identifiers
-liv.otl@data$id <- rownames(liv.otl@data)
-liv.otl.points <- fortify(liv.otl, region='id')
-liv.otl.df <- join(liv.otl.points, liv.otl@data, by='id')
-```
-
-The shape we will overlay looks like this:
-
-```{r, fig.margin=TRUE}
-ggplot(liv.otl.df) +
-  aes(long, lat) +
-  geom_polygon()
-```
-
-Then, overlaying the surface of log-prices is relatively straightforward:
-
-```{r, fig.fullwidth=TRUE, fig.cap = 'Surface of log-prices in Liverpool'}
-xyz['lz'] <- log(xyz$z)
-base <- ggplot(liv.otl.df) +
-            aes(long, lat) +
-            geom_polygon()
-surface <- base +
-           geom_raster(data=xyz, 
-                       aes(x=x, y=y,
-                           fill=lz, alpha=lz),
-                           show.legend = FALSE) +
-           scale_fill_gradient2(low = "#fffff8", 
-                       high = "#66c2a5") +
-           theme(legend.position = "none") 
-final <- surface + 
-  theme(plot.background = element_rect(fill = '#fffff8'),
-        panel.background = element_rect(fill = '#fffff8'),
-        legend.background = element_rect(fill = '#fffff8'),
-        plot.background = element_rect(fill = '#fffff8'))
-final
-```
+Now this looks better. We can start to tell some patterns. To bring in context, it would be great to be able to add a basemap layer, as we did for the KDE. This is conceptually very similar to what we did above, starting by reprojecting the points and continuing by overlaying them on top of the basemap. However, technically speaking it is not possible because `ggmap` --the library we have been using to display tiles from cloud providers-- does not play well with our own rasters (i.e. the price surface). At the moment, it is surprisingly tricky to get this to work, so we will park it for now. However, developments such as the [`sf`](https://github.com/edzer/sfr) project promise to make this easier in the future^[**BONUS** if you can figure out a way to do it yourself!]. 
 
 ## _"What should the next house's price be?"_
 
