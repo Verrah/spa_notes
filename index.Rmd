@@ -4,7 +4,8 @@ subtitle: "Computational illustrations in R"
 author: "[Dani Arribas-Bel](http://darribas.org) ([`@darribas`](http://twitter.com/darribas))"
 date: ""
 output:
-  tufte::tufte_html: default
+  tufte::tufte_html:
+      css: extra.css
   tufte::tufte_handout:
     citation_package: natbib
     latex_engine: xelatex
@@ -48,6 +49,8 @@ library(knitr)
 library(rgdal)
 # Pretty graphics
 library(ggplot2)
+# Thematic maps
+library(tmap)
 # Pretty maps
 library(ggmap)
 # Various GIS utilities
