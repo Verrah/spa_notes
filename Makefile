@@ -3,7 +3,7 @@ docs:
 website:
 	R CMD BATCH build.R
 	echo "Build successfully completed"
-	git add points.html points_book.pdf sp_eco.html sp_eco_book.pdf
+	git add index.html points.html points_book.pdf sp_eco.html sp_eco_book.pdf
 	git commit -m "Update of HTML and PDF pre-website build"
 	cp index.html temp_index.html
 	cp points.html temp_points.html
