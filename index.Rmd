@@ -27,6 +27,7 @@ This page^[<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4
 
 * [**Points**](points.html): kernel density estimation and spatial interpolation
 * [**Spatial Econometrics**](sp_eco.html): an introduction to spatial regression
+* [**Spatial Flows**](flows.html): an introduction to spatial flows estimation
 
 These notes are hosted as a GitHub repository and you can access it in a few
 ways:

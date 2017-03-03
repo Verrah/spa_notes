@@ -1,7 +1,7 @@
 library(rmarkdown)
 library(tufte)
 
-    #render('index.Rmd')
+    render('index.Rmd')
 
     #render('points.Rmd')
     #render('points.Rmd', 'tufte_handout')
