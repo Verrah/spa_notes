@@ -113,7 +113,7 @@ The rest of this session will focus on two main elements of the shapefile: the s
 ```{r, fig.margin = TRUE, fig.cap = 'Raw house prices in Liverpool'}
 # Create the histogram
 hist <- qplot(data=db@data,x=price)
-histplot
+hist
 ```
 
 This basically shows there is a lot of values concentrated around the lower end of the distribution but a few very large ones. A usual transformation to *shrink* these differences is to take logarithms:
@@ -124,7 +124,7 @@ logpr <- log(as.numeric(db@data$price))
 db@data['logpr'] <- logpr
 # Create the histogram
 hist <- qplot(x=logpr)
-histplot
+hist
 ```
 
 To obtain the spatial distribution of these houses, we need to turn away from the `@data` component of `db`. The easiest, quickest (and also dirtiest) way to get a sense of what the data look like over space is using `plot`:

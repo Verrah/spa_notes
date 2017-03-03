@@ -1,5 +1,7 @@
 docs:
+	echo "Building..."
 	R CMD BATCH build.R
+	echo "Build successfully completed"
 website:
 	R CMD BATCH build.R
 	echo "Build successfully completed"
