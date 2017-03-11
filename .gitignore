@@ -32,3 +32,6 @@ vignettes/*.pdf
 */.ipynb_checkpoints/
 */key
 key
+*/lines.csv
+*/trips.zip
+*/201608_trip_data.csv
