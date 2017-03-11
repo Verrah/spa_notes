@@ -28,6 +28,7 @@ vignettes/*.pdf
 
 ### DANI added
 
-.ipynb-checkpoints
+..ipynb_checkpoints/
+*/.ipynb_checkpoints/
 */key
 key
