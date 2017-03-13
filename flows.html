@@ -12,7 +12,7 @@
 
 <meta name="author" content="Dani Arribas-Bel" />
 
-<meta name="date" content="2017-03-10" />
+<meta name="date" content="2017-03-13" />
 
 <title>Flows</title>
 
@@ -44,7 +44,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <h1 class="title toc-ignore">Flows</h1>
 <h3 class="subtitle"><em>Exploring flows visually and through spatial interaction</em></h3>
 <h4 class="author"><em>Dani Arribas-Bel</em></h4>
-<h4 class="date"><em>2017-03-10</em></h4>
+<h4 class="date"><em>2017-03-13</em></h4>
 
 
 
@@ -66,28 +66,34 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 library(tufte)
 # Spatial Data management
 library(rgdal)</code></pre>
+<pre><code>## Warning: package 'rgdal' was built under R version 3.2.5</code></pre>
 <pre><code>## Loading required package: sp</code></pre>
+<pre><code>## Warning: package 'sp' was built under R version 3.2.5</code></pre>
 <pre><code>## rgdal: version: 1.2-5, (SVN revision 648)
 ##  Geospatial Data Abstraction Library extensions to R successfully loaded
 ##  Loaded GDAL runtime: GDAL 2.1.2, released 2016/10/24
 ##  Path to GDAL shared files: 
 ##  Loaded PROJ.4 runtime: Rel. 4.9.1, 04 March 2015, [PJ_VERSION: 491]
-##  Path to PROJ.4 shared files: /Library/Frameworks/R.framework/Versions/3.3/Resources/library/rgdal/proj
+##  Path to PROJ.4 shared files: /Library/Frameworks/R.framework/Versions/3.2/Resources/library/rgdal/proj
+## WARNING: no proj_defs.dat in PROJ.4 shared files
 ##  Linking to sp version: 1.2-3</code></pre>
 <pre class="r"><code># Pretty graphics
-library(ggplot2)
-# Thematic maps
-library(tmap)
-# Pretty maps
+library(ggplot2)</code></pre>
+<pre><code>## Warning: package 'ggplot2' was built under R version 3.2.5</code></pre>
+<pre class="r"><code># Thematic maps
+library(tmap)</code></pre>
+<pre><code>## Warning: package 'tmap' was built under R version 3.2.5</code></pre>
+<pre><code>## Warning: replacing previous import 'Matrix::expm' by 'expm::expm' when
+## loading 'spdep'</code></pre>
+<pre class="r"><code># Pretty maps
 library(ggmap)</code></pre>
-<pre><code>## Google Maps API Terms of Service: http://developers.google.com/maps/terms.</code></pre>
-<pre><code>## Please cite ggmap if you use it: see citation(&quot;ggmap&quot;) for details.</code></pre>
 <p>Before we start any analysis, let us set the path to the directory where we are working. We can easily do that with <code>setwd()</code>. Please replace in the following line the path to the folder where you have placed this file -and where the <code>sf_bikes</code> folder with the data lives.</p>
 <pre class="r"><code>#setwd('/media/dani/baul/AAA/Documents/teaching/u-lvl/2016/envs453/code')
 setwd('.')</code></pre>
 </div>
 <div id="data" class="section level1">
 <h1>Data</h1>
+<p>In this note, we will use data from the city of San Francisco representing bike trips on their public bike share system. The source is the SF Open Data portal (<a href="http://www.bayareabikeshare.com/open-data">link</a>) and the dataset comprises trips (station of origin to station of destination) undertaken in the system from September 2015 to August 2016.</p>
 <ul>
 <li>Read stations</li>
 <li>Read flows (create all potential ones?)</li>
