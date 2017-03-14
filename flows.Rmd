@@ -23,11 +23,13 @@ knitr::opts_chunk$set(tidy = FALSE, cache.extra = packageVersion('tufte'))
 options(htmltools.dir.version = FALSE)
 ```
 
-This session^[This note is part of [Spatial Analysis Notes](index.html) <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br /><span xmlns:dct="http://purl.org/dc/terms/" property="dct:title">Flows -- Exploring flows visually and through spatial interaction</span> by <a xmlns:cc="http://creativecommons.org/ns#" href="http://darribas.org" property="cc:attributionName" rel="cc:attributionURL">Dani Arribas-Bel</a> is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.] is based on the following references, which are great follow-up's on the topic:
+This session^[This note is part of [Spatial Analysis Notes](index.html) <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br /><span xmlns:dct="http://purl.org/dc/terms/" property="dct:title">Flows -- Exploring flows visually and through spatial interaction</span> by <a xmlns:cc="http://creativecommons.org/ns#" href="http://darribas.org" property="cc:attributionName" rel="cc:attributionURL">Dani Arribas-Bel</a> is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.] covers spatial interaction flows. Using open data from the city of San Francisco about trips on its bikeshare system, we will estimate spatial interaction models that try to capture and explain the variation in the amount of trips on each given route. After visualizing the dataset, we begin with a very simple model and then build complexity progressively by augmenting it with more information, refined measurements, and better modeling approaches. Throughout the note, we explore different ways to grasp the predictive performance of each model. We finish with a prediction example that illustrates how these models can be deployed in a real-world application.
 
-* @gds_ua17, an online short course on R for Geographic Data Science and Urban Analytics.
+Content is based on the following references, which are great follow-up's on the topic:
 
-This tutorial is part of [Spatial Analysis Notes](index.html), a compilation hosted as a GitHub repository that you can access it in a few ways:
+* @gds_ua17, an online short course on R for Geographic Data Science and Urban Analytics. In particular, the section on [mapping flows](https://github.com/alexsingleton/GDS_UA_2017/tree/master/Mapping_Flows) is specially relevant here.
+
+This tutorial is part of [Spatial Analysis Notes](index.html), a compilation hosted as a GitHub repository that you can access in a few ways:
 
 * As a [download](https://github.com/darribas/spa_notes/archive/master.zip) of a `.zip` file that contains all the materials.
 * As an [html
@@ -62,12 +64,45 @@ setwd('.')
 
 # Data
 
-* Read stations
-* Read flows (create all potential ones?)
-* Read routes and explain
-* Calculate distances (euclidean + routes)
+In this note, we will use data from the city of San Francisco representing bike trips on their public bike share system. The original source is the SF Open Data portal ([link](http://www.bayareabikeshare.com/open-data)) and the dataset comprises both the location of each station in the Bay Area as well as information on trips (station of origin to station of destination) undertaken in the system from September 2015 to August 2016. Since this note is about modeling and not data preparation, a cleanly reshaped version of the data, together with some additional information, has been created and placed in the `sf_bikes` folder. The data file is named `flows.geojson` and, in case you are interested, the (Python) code required to created from the original files in the SF Data Portal is also available on the `flows_prep.ipynb` notebook [[url]](https://github.com/darribas/spa_notes/blob/master/sf_bikes/flows_prep.ipynb), also in the same folder.
+
+Let us then directly load the file with all the information necessary:
+
+```{r}
+db <- readOGR(dsn='sf_bikes/flows.geojson', layer='OGRGeoJSON')
+```
+
+Note how the interface is slightly different since we are reading a `GeoJSON` file instead of a shapefile.
+
+The data contains the geometries of the flows, as calculated from the [Google Maps API](https://developers.google.com/maps/), as well as a series of columns with characteristics of each flow:
+
+```{r}
+head(db@data)
+```
+
+where `orig` and `dest` are the station IDs of the origin and destination, `street/straight_dist` is the distance in metres between stations measured along the street network or as-the-crow-flies, `total_down/up` is the total downhil and climb in the trip, and `trips` contains the amount of trips undertaken in the period of study.
 
 # "*Seeing*" flows
+
+The easiest way to get a quick preview of what the data looks like spatially is to make a simple plot:
+
+```{r, fig.margin = TRUE, fig.cap = 'Potential routes'}
+plot(db)
+```
+
+Equally, if we want to visualize a single route, we can simply subset the table. For example, to get the shape of the trip from station `39` to station `48`, we can:
+
+```{r, fig.maring = TRUE, fig.cap = 'Trip from station 39 to 48'}
+plot(db[ which(
+          db@data$orig == 39 & db@data$dest == 48
+          ) , ])
+```
+
+These however do not reveal a lot: there is no geographical context (*why are there so many routes along the NE?*) and no sense of how volumes of bikers are allocated along different routes. Let us fix those two.
+
+The easiest way to bring in geographical context is by overlaying the routes on top of a background map of tiles downloaded from the internet.
+
+The figure displays one route for every potential 
 
 * Plot stations on `ggmap`
 * Plot flows on euclidean + `ggmap`
@@ -86,4 +121,3 @@ setwd('.')
 
   * Evaluate model performance predicting last month
 
-# References

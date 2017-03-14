@@ -24,3 +24,16 @@ vignettes/*.pdf
 
 # OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
 .httr-oauth
+
+
+### DANI added
+
+..ipynb_checkpoints/
+*/.ipynb_checkpoints/
+*/key
+*/key_ele
+key
+key_ele
+*/lines.csv
+*/trips.zip
+*/201608_trip_data.csv
