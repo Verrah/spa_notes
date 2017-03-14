@@ -92,27 +92,131 @@ plot(db)
 
 Equally, if we want to visualize a single route, we can simply subset the table. For example, to get the shape of the trip from station `39` to station `48`, we can:
 
-```{r, fig.maring = TRUE, fig.cap = 'Trip from station 39 to 48'}
-plot(db[ which(
+```{r, fig.margin = TRUE, fig.cap = 'Trip from station 39 to 48'}
+one39to48 <- db[ which(
           db@data$orig == 39 & db@data$dest == 48
-          ) , ])
+          ) , ]
+plot(one39to48)
+```
+
+or, for the most popular route, we can:
+
+```{r, fig.margin = TRUE, fig.cap = 'Most popular trip'}
+most_pop <- db[ which(
+          db@data$trips == max(db@data$trips)
+          ) , ]
+plot(most_pop)
 ```
 
 These however do not reveal a lot: there is no geographical context (*why are there so many routes along the NE?*) and no sense of how volumes of bikers are allocated along different routes. Let us fix those two.
 
-The easiest way to bring in geographical context is by overlaying the routes on top of a background map of tiles downloaded from the internet.
+The easiest way to bring in geographical context is by overlaying the routes on top of a background map of tiles downloaded from the internet. Let us download this using `ggmap`:
 
-The figure displays one route for every potential 
+```{r}
+sf_bb <- c(left=db@bbox['x', 'min'],
+           right=db@bbox['x', 'max'],
+           bottom=db@bbox['y', 'min'],
+           top=db@bbox['y', 'max'])
+SanFran <- get_stamenmap(sf_bb, 
+                         zoom = 14, 
+                         maptype = "toner-lite")
+```
 
-* Plot stations on `ggmap`
-* Plot flows on euclidean + `ggmap`
-* Plot flows with routes + `ggmap`
+and make sure it looks like we intend it to look:
+
+```{r, fig.margin=T}
+ggmap(SanFran)
+```
+
+Now to combine tiles and routes, we need to pull out the coordinates that make up each line. For the route example above, this would be:
+
+```{r, fig.margin=T}
+xys1 <- as.data.frame(coordinates(most_pop))
+```
+
+Now we can plot the route^[**EXERCISE**: *can you plot the route for the largest climb?*] (note we also dim down the background to focus the attention on flows):
+
+```{r, fig.margin=T}
+ggmap(SanFran, darken=0.5) + 
+  geom_path(aes(x=X1, y=X2), 
+            data=xys1,
+            size=1,
+            color=rgb(0.996078431372549, 0.7019607843137254, 0.03137254901960784),
+            lineend='round')
+```
+
+Now we can plot all of the lines by using a short `for` loop to build up the table:
+
+```{r}
+# Set up shell data.frame
+lines <- data.frame(lat = numeric(0), 
+                    lon = numeric(0), 
+                    trips = numeric(0),
+                    id = numeric(0)
+                    )
+# Run loop
+for(x in 1:nrow(db)){
+  # Pull out row
+  r <- db[x, ]
+  # Extract lon/lat coords
+  xys <- as.data.frame(coordinates(r))
+  names(xys) <- c('lon', 'lat')
+  # Insert trips and id
+  xys['trips'] <- r@data$trips
+  xys['id'] <- x
+  # Append them to `lines`
+  lines <- rbind(lines, xys)
+}
+```
+
+Now we can go on and plot all of them:
+
+```{r, fig.margin=T}
+ggmap(SanFran, darken=0.75) + 
+  geom_path(aes(
+                x=lon, 
+                y=lat,
+                group=id
+                ),
+            data=lines,
+            size=0.1,
+            color=rgb(0.996078431372549, 0.7019607843137254, 0.03137254901960784),
+            lineend='round')
+```
+
+Finally, we can get a sense of the distribution of the flows by associating a color gradient to each flow based on its number of trips:
+
+```{r, fig.fullwidth=T}
+ggmap(SanFran, darken=0.75) + 
+  geom_path(aes(
+                x=lon, 
+                y=lat,
+                group=id,
+                colour=trips
+                ),
+            data=lines,
+            size=log1p(lines$trips / max(lines$trips)),
+            lineend='round') +
+  scale_colour_gradient(low='grey',
+                        high='#07eda0') +
+  theme(axis.text.x = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks = element_blank()
+      )
+```
+
+Note how we transform the size so it's a proportion of the largest trip and then it is compressed with a logarithm.
 
 # Modelling flows
 
 * Fit baseline
 
   * Baseline model: OLS + euclidean distances
+  
+```{r}
+m1 <- lm('trips ~ street_dist + total_down + total_up', data=db@data)
+summary(m1)
+```
   * Baseline + Poisson
   * Baseline + routed distances
   * Baseline + Poisson + routed distances
@@ -121,3 +225,4 @@ The figure displays one route for every potential
 
   * Evaluate model performance predicting last month
 
+# References
