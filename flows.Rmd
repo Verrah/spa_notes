@@ -554,7 +554,7 @@ $$
 T_{ij} \sim Poisson (\exp^{X_{ij}\beta})
 $$
 
-we need to transform $\beta$ through an exponential in order to get a sense of the effect of distance on the number of trips. This means that for the street distance, our original estimate is $\beta_{street} = -0.096$, but this needs to be translated through the exponential into $e^{-0.096} = 0.90$. In other words, since distance is expressed in standard deviations^[Remember the transformation at the very beginning.], we can expect a 10% decrease in the number of trips for an increase of one standard deviation (about 1Km) in the distance between the stations. This can be compared with $e^{-0.078} = 0.92$ for the straight distances, or a reduction of about 8% the number of trips for every increase of a standard deviation (about 720m).
+we need to transform $\beta$ through an exponential in order to get a sense of the effect of distance on the number of trips. This means that for the street distance, our original estimate is $\beta_{street} = -0.0996$, but this needs to be translated through the exponential into $e^{-0.0996} = 0.906$. In other words, since distance is expressed in standard deviations^[Remember the transformation at the very beginning.], we can expect a 10% decrease in the number of trips for an increase of one standard deviation (about 1Km) in the distance between the stations. This can be compared with $e^{-0.0782} = 0.925$ for the straight distances, or a reduction of about 8% the number of trips for every increase of a standard deviation (about 720m).
 
 # Predicting flows
 
