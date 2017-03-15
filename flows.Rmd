@@ -396,7 +396,7 @@ legend('topright',
        c('Predicted', 'Actual'),
        col=c('black', 'red'),
        lwd=1)
-title(main="Predictive check, point estimates - Orig/dest FE Poisson model")
+title(main="Predictive check, point estimates - Poisson model")
 ```
 
 To incorporate uncertainty to these predictions, we need to tweak our `generate_draw`  function so it accommodates the fact that our model is not linear anymore.
@@ -450,7 +450,7 @@ legend('topright',
        c('Predicted', 'Actual', 'Simulated (n=250)'),
        col=c('black', 'red', 'grey'),
        lwd=1)
-title(main="Predictive check - Orig/dest FE count model")
+title(main="Predictive check - Poisson model")
 ```
 
 Voila! Although the curve is still a bit off, centered too much to the right of the actual data, our predictive simulation leaves the fitted values right in the middle. This speaks to a better fit of the model to the actual distribution othe original data follow. The idea 
@@ -556,7 +556,58 @@ we need to transform $\beta$ through an exponential in order to get a sense of t
 
 # Predicting flows
 
-* Swap trips for previous year's
-* Compare predictions from the models with last year's counts in terms of predictive performance (distribution, RMSE)
+So far we have put all of our modeling efforts in understanding the model we fit and improving such model so it fits our data as closely as possible. This is essential in any modelling exercise but should be far from a stopping point. Once we're confident our model is a decent representation of the data generating process, we can start exploiting it. In this section, we will cover one specific case that showcases how a fitted model can help: out-of-sample forecasts.
+
+It is August 2015, and you have just started working as a data scientist for the bikeshare company that runs the San Francisco system. You join them as they're planning for the next academic year and, in order to plan their operations (re-allocating vans, station maintenance, etc.), they need to get a sense of how many people are going to be pedalling across the city and, crucially, *where* they are going to be pedalling through. What can you do to help them?
+
+The easiest approach is to say "well, a good guess for how many people will be going between two given stations this coming year is how many went through last year, isn't it?". This is one prediction approach. However, you could see how, even if the same process governs over both datasets (2015 and 2016), each year will probably have some idiosyncracies and thus looking too closely into one year might not give the best possible answer for the next one. Ideally, you want a good stylized synthesis that captures the bits that stay constant over time and thus can be applied in the future and that ignores those aspects that are too particular to a given point in time. That is the rationale behind using a fitted model to obtain predictions.
+
+However good any theory though, the truth is in the pudding. So, to see if a modeling approach is better at producing forecasts than just using the counts from last year, we can put them to a test. The way this is done when evaluating the predictive performance of a model (as this is called in the literature) relies on two basic steps: a) obtain predictions from a given model and b) compare those to the actual values (in our case, with the counts for 2016 in `trips16`) and get a sense of "how off" they are. We have essentially covered a) above; for b), there are several measures to use. We will use one of the most common ones, the root mean squared error (RMSE), which roughly gives a sense of the average difference between a predicted vector and the real deal:
+
+$$
+RMSE = \sqrt{ \sum_{ij} (\hat{T_{ij}} - T_{ij})^2}
+$$
+
+where $\hat{T_{ij}}$ is the predicted amount of trips between stations $i$ and $j$. RMSE is straightforward in R and, since we will use it a couple of times, let's write a short function to make our lives easier:
+
+```{r}
+rmse <- function(t, p){
+  se <- (t - p)^2
+  mse <- mean(se)
+  rmse <- sqrt(mse)
+  return(rmse)
+}
+```
+
+where `t` stands for the vector of true values, and `p` is the vector of predictions. Let's give it a spin to make sure it works:
+
+```{r}
+rmse_m4 <- rmse(db_std$trips16, m4$fitted.values)
+rmse_m4
+```
+
+That means that, on average, predictions in our best model `m4` are 256 trips off. Is this good? Bad? Worse? It's hard to say but, being practical, what we can say is whether this better than our alternative. Let us have a look at the RMSE of the other models as well as that of simply plugging in last year's counts:^[**EXERCISE**: can you create a single plot that displays the distribution of the predicted values of the five different ways to predict trips in 2016 and the actual counts of trips?]
+
+```{r}
+rmses <- data.frame(model=c('OLS', 'Poisson', 'Poisson + FE', 
+                            'Poisson + FE + street dist.',
+                            'Trips-2015'
+                            ),
+                    RMSE=c(rmse(db_std$trips16, 
+                              m1$fitted.values),
+                           rmse(db_std$trips16, 
+                              m2$fitted.values),
+                           rmse(db_std$trips16, 
+                              m3$fitted.values),
+                           rmse(db_std$trips16, 
+                              m4$fitted.values),
+                           rmse(db_std$trips16, 
+                                db_std$trips15)
+                           )
+                      )
+rmses
+```
+
+The table is both encouraging and disheartning at the same time. On the one hand, all the modeling techniques covered above behave as we would expect: the baseline model displays the worst predicting power of all, and every improvement (except the street distances!) results in notable decreases of the RMSE. This is good news. However, on the other hand, all of our modelling efforts fall short of given a better guess than simply using the previous year's counts. *Why? Does this mean that we should not pay attention to modeling and inference?* Not really. Generally speaking, a model is as good at predicting as it is able to mimic the underlying process that gave rise to the data in the first place. The results above point to a case where our model is not picking up all the factors that determine the amount of trips undertaken in a give route. This could be improved by enriching the model with more/better predictors, as we have seen above. Also, the example above seems to point to a case where those idiosyncracies in 2015 that the model does not pick up seem to be at work in 2016 as well. This is great news for our prediction efforts this time, but we have no idea why this is the case and, for all that matters, it could change the coming year. Besides the elegant quantification of uncertainty, the true advantage of a modeling approach in this context is that, if well fit, it is able to pick up the fundamentals that apply over and over. This means that, if next year we're not as lucky as this one and previous counts are not good predictors but the variables we used in our model continue to have a role in determining the outcome, the data scientist should be luckier and hit a better prediction.
 
 # References
