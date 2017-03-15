@@ -28,6 +28,7 @@ This session^[This note is part of [Spatial Analysis Notes](index.html) <a rel="
 Content is based on the following references, which are great follow-up's on the topic:
 
 * @gds_ua17, an online short course on R for Geographic Data Science and Urban Analytics. In particular, the section on [mapping flows](https://github.com/alexsingleton/GDS_UA_2017/tree/master/Mapping_Flows) is specially relevant here.
+* The predictive checks section draws heavily from @gelman2006data, in particular Chapters 6 and 7.
 
 This tutorial is part of [Spatial Analysis Notes](index.html), a compilation hosted as a GitHub repository that you can access in a few ways:
 
@@ -53,12 +54,13 @@ library(ggplot2)
 library(tmap)
 # Pretty maps
 library(ggmap)
+# Simulation methods
+library(arm)
 ```
 
 Before we start any analysis, let us set the path to the directory where we are working. We can easily do that with `setwd()`. Please replace in the following line the path to the folder where you have placed this file -and where the `sf_bikes` folder with the data lives.
 
 ```{r}
-#setwd('/media/dani/baul/AAA/Documents/teaching/u-lvl/2016/envs453/code')
 setwd('.')
 ```
 
@@ -209,20 +211,305 @@ Note how we transform the size so it's a proportion of the largest trip and then
 
 # Modelling flows
 
-* Fit baseline
+Now we have an idea of the spatial distribution of flows, we can begin to think about modeling them. The core idea in this section is to fit a model that can capture the particular characteristics of our variable of interest (the volume of trips) using a set of predictors that describe the nature of a given flow. We will start from the simplest model and then progressively build complexity until we get to a satisfying point. Along the way, we will be exploring each model using concepts from @gelman2006data such as predictive performance checks^[For a more elaborate introduction to PPC, have a look at Chapters 7 and 8.] (PPC)
 
-  * Baseline model: OLS + euclidean distances
-  
+Before we start running regressions, let us first standardize the predictors so we can interpret the intercept as the average flow when all the predictors take the average value, and so we can interpret the model coefficients as changes in standard deviation units:
+
 ```{r}
-m1 <- lm('trips ~ street_dist + total_down + total_up', data=db@data)
+# Scale all the table
+db_std <- as.data.frame(scale(db@data))
+# Reset trips as we want the original version
+db_std$trips <- db@data$trips
+# Reset origin and destination station and express them as factors
+db_std$orig <- as.factor(db@data$orig)
+db_std$dest <- as.factor(db@data$dest)
+```
+
+## Baseline model
+
+One of the simplest possible models we can fit in this context is a linear model that explains the number of trips as a function of the straight distance between the two stations and total amount of climb and downhill. We will take this as the baseline on which we can further build later:
+
+```{r}
+m1 <- lm('trips ~ straight_dist + total_up + total_down', data=db_std)
 summary(m1)
 ```
-  * Baseline + Poisson
-  * Baseline + routed distances
-  * Baseline + Poisson + routed distances
+
+To explore how good this model is, we will be comparing the predictions the model makes about the number of trips each flow should have with the actual number of trips. A first approach is to simply plot the distribution of both variables:
+
+```{r, fig.margin=T}
+plot(density(m1$fitted.values), 
+     xlim=c(-100, max(db_std$trips)),
+     main='')
+lines(density(db_std$trips), 
+      col='red',
+      main='')
+legend('topright', 
+       c('Predicted', 'Actual'),
+       col=c('black', 'red'),
+       lwd=1)
+title(main="Predictive check, point estimates - Baseline model")
+```
+
+The plot makes pretty obvious that our initial model captures very few aspects of the distribution we want to explain. However, we should not get too attached to this plot just yet. What it is showing is the distribution of predicted *point* estimates from our model. Since our model is not deterministic but inferential, there is a certain degree of uncertainty attached to its predictions, and that is completely absent from this plot. 
+
+Generally speaking, a given model has two sources of uncertainty: *predictive*, and *inferential*. The former relates to the fact that the equation we fit does not capture all the elements or in the exact form they enter the true data generating process; the latter has to do with the fact that we never get to know the true value of the model parameters only guesses (estimates) subject to error and uncertainty. If you think of our linear model above as
+
+$$
+T_{ij} = X_{ij}\beta + \epsilon_{ij}
+$$
+where $T_{ij}$ represents the number of trips undertaken between station $i$ and $j$, $X_{ij}$ is the set of explanatory variables (length, climb, descent, etc.), and $\epsilon_{ij}$ is an error term assumed to be distributed as a normal distribution $N(0, \sigma)$; then predictive uncertainty comes from the fact that there are elements to some extent relevant for $y$ that are not accounted for and thus subsummed into $\epsilon_{ij}$. Inferential uncertainty comes from the fact that we never get to know $\beta$ but only an estimate of it which is also subject to uncertainty itself.
+
+Taking these two sources into consideration means that the black line in the plot above represents only the behaviour of our model we expect if the error term is absent (no predictive uncertainty) and the coefficients are the true estimates (no inferential uncertainty). However, this is not necessarily the case as our estimate for the uncertainty of the error term is certainly not zero, and our estimates for each parameter are also subject to a great deal of inferential variability. we do not know to what extent other outcomes would be just as likely. Predictive checking relates to simulating several feasible scenarios under our model and use those to assess uncertainty and to get a better grasp of the quality of our predictions.
+
+Technically speaking, to do this, we need to build a mechanism to obtain a possible draw from our model and then repeat it several times. The first part of those two steps can be elegantly dealt with by writing a short function that takes a given model and a set of predictors, and produces a possible random draw from such model:
+
+```{r}
+generate_draw <- function(m){
+  # Set up predictors matrix
+  x <- model.matrix(m)
+  # Obtain draws of parameters (inferential uncertainty)
+  sim_bs <- sim(m, 1)
+  # Predicted value
+  mu <- x %*% sim_bs@coef[1, ]
+  # Draw
+  n <- length(mu)
+  y_hat <- rnorm(n, mu, sim_bs@sigma[1])
+  return(y_hat)
+}
+```
+
+This function takes a model `m` and the set of covariates `x` used and returns a random realization of predictions from the model. To get a sense of how this works, we can get and plot a realization of the model, compared to the expected one and the actual values:
+
+```{r, fig.margin=T}
+new_y <- generate_draw(m1)
+
+plot(density(m1$fitted.values), 
+     xlim=c(-100, max(db_std$trips)),
+     ylim=c(0, max(c(
+                      max(density(m1$fitted.values)$y), 
+                      max(density(db_std$trips)$y)
+                      )
+                   )
+            ),
+     col='black',
+     main='')
+lines(density(db_std$trips), 
+      col='red',
+      main='')
+lines(density(new_y), 
+      col='green',
+      main='')
+legend('topright', 
+       c('Predicted', 'Actual', 'Simulated'),
+       col=c('black', 'red', 'green'),
+       lwd=1)
+```
+
+Once we have this "draw engine", we can set it to work as many times as we want using a simple `for` loop. In fact, we can directly plot these lines as compared to the expected one and the trip count:
+
+```{r}
+plot(density(m1$fitted.values), 
+     xlim=c(-100, max(db_std$trips)),
+     ylim=c(0, max(c(
+                  max(density(m1$fitted.values)$y), 
+                  max(density(db_std$trips)$y)
+                  )
+               )
+        ),
+     col='white',
+     main='')
+# Loop for realizations
+for(i in 1:250){
+  tmp_y <- generate_draw(m1)
+  lines(density(tmp_y),
+        col='grey',
+        lwd=0.1
+        )
+}
+#
+lines(density(m1$fitted.values), 
+      col='black',
+      main='')
+lines(density(db_std$trips), 
+      col='red',
+      main='')
+legend('topright', 
+       c('Actual', 'Predicted', 'Simulated (n=250)'),
+       col=c('red', 'black', 'grey'),
+       lwd=1)
+title(main="Predictive check - Baseline model")
+```
+
+The plot shows there is a significant mismatch between the fitted values, which are much more concentrated around small positive values, and the realizations of our "inferential engine", which depict a much less concentrated distribution of values. This is likely due to the combination of two different reasons: on the one hand, the accuracy of our estimates may be poor, causing them to jump around a wide range of potential values and hence resulting in very diverse predictions (inferential uncertainty); on the other hand, it may be that the amount of variation we are not able to account for in the model^[The $R^2 of our model is around 2%] is so large that the degree of uncertainty contained in the error term of the model is very large, hence resulting in such a flat predictive distribution.
+
+It is important to keep in mind that the issues discussed in the paragraph above relate only to the uncertainty behind our model, not to the point predictions derived from them, which are a mechanistic result of the minimization of the squared residuals and hence are not subject to probability or inference. That allows them in this case to provide a fitted distribution much more accurate apparently (black line above). However, the lesson to take from this model is that, even if the point predictions (fitted values) are artificially accurate^[which they are not really, in light of the comparison between the black and red lines.], our capabilities to infer about the more general underlying process are fairly limited.
+
+## Improving the model
+
+The bad news from the previous section is that our initial model is not great at explaining bike trips. The good news is there are several ways in which we can improve this. In this section we will cover three main extensions that exemplify three different routes you can take when enriching and augmenting models in general, and spatial interaction ones in particular^[These principles are general and can be applied to pretty much any modeling exercise you run into. The specific approaches we take in this note relate to spatial interaction models]. These three routes are aligned around the following principles:
+
+1. Use better approximations to model your dependent variable.
+1. Recognize the structure of your data.
+1. Get better predictors.
+
+### Use better approximations to model your dependent variable.
+
+Standard OLS regression assumes that the error term and, since the predictors are deterministic, the dependent variable are distributed following a normal (gaussian) distribution. This is usually a good approximation for several phenomena of interest, but maybe not the best one for trips along routes: for one, we know trips cannot be negative, which the normal distribution does not account for^[For an illustration of this, consider the amount of probability mass to the left of zero in the predictive checks above.]; more subtly, their distribution is not really symmetric but skewed with a very long tail on the right. This is common in variables that represent counts and that is why usually it is more appropriate to fit a model that relies on a distribution different from the normal.
+
+One of the most common distributions for this cases is the Poisson, which can be incorporated through a general linear model (or GLM). The underlying assumption here is that instead of $T_{ij} \sim N(\mu_{ij}, \sigma)$, our model now follows:
+
+$$
+T_{ij} \sim Poisson (\exp^{X_{ij}\beta})
+$$
+
+As usual, such a model is easy to run in R:
+
+```{r}
+m3 <- glm('trips ~ straight_dist + total_up + total_down', 
+          data=db_std,
+          family=poisson,
+          )
+```
+
+Now let's see how much better, if any, this approach is. To get a quick overview, we can simply plot the point predictions:
+
+```{r, fig.margin=T}
+plot(density(m3$fitted.values), 
+     xlim=c(-100, max(db_std$trips)),
+     ylim=c(0, max(c(
+                  max(density(m3$fitted.values)$y), 
+                  max(density(db_std$trips)$y)
+                  )
+               )
+      ),
+     col='black',
+     main='')
+lines(density(db_std$trips), 
+      col='red',
+      main='')
+legend('topright', 
+       c('Predicted', 'Actual'),
+       col=c('black', 'red'),
+       lwd=1)
+title(main="Predictive check, point estimates - Orig/dest FE Poisson model")
+```
+
+To incorporate uncertainty to these predictions, we need to tweak our `generate_draw`  function so it accommodates the fact that our model is not linear anymore.
+
+```{r}
+generate_draw_poi <- function(m){
+  # Set up predictors matrix
+  x <- model.matrix(m)
+  # Obtain draws of parameters (inferential uncertainty)
+  sim_bs <- sim(m, 1)
+  # Predicted value
+  xb <- x %*% sim_bs@coef[1, ]
+  #xb <- x %*% m$coefficients
+  # Transform using the link function
+  mu <- exp(xb)
+  # Obtain a random realization
+  y_hat <- rpois(n=length(mu), lambda=mu)
+  return(y_hat)
+}
+```
+
+And then we can examine both point predictions an uncertainty around them:
+
+```{r, fig.margin=T}
+plot(density(m3$fitted.values), 
+     xlim=c(-100, max(db_std$trips)),
+     ylim=c(0, max(c(
+                  max(density(m3$fitted.values)$y), 
+                  max(density(db_std$trips)$y)
+                  )
+               )
+      ),
+     col='white',
+     main='')
+# Loop for realizations
+for(i in 1:250){
+  tmp_y <- generate_draw_poi(m3)
+  lines(density(tmp_y),
+        col='grey',
+        lwd=0.1
+        )
+}
+#
+lines(density(m3$fitted.values), 
+      col='black',
+      main='')
+lines(density(db_std$trips), 
+      col='red',
+      main='')
+legend('topright', 
+       c('Predicted', 'Actual', 'Simulated (n=250)'),
+       col=c('black', 'red', 'grey'),
+       lwd=1)
+title(main="Predictive check - Orig/dest FE count model")
+```
+
+Voila! Although the curve 
+
+### Recognize the structure of your data
+
+So far, we've treated our dataset as if it was flat (i.e. comprise of fully independent realizations) when in fact it is not. Most crucially, our baseline model does not account for the fact that every observation in the dataset pertains to a trip between two stations. This means that all the trips from or to the same station probably share elements which likely help explain how many trips are undertaken between stations. For example, think of trips to an from a station located in the famous Embarcadero, a popular tourist spot. Every route to and from there probably has more trips due to the popularity of the area and we are currently not acknowledging it in the model.
+
+A simple way to incorporate these effects into the model is through origin and destination fixed effects. This approach shares elements with both spatial fixed effects and multilevel modeling and essentially consists of including a binary variable for every origin and destination station. In mathematical notation, this equates to:
+
+$$
+T_{ij} = X_{ij}\beta + \delta_i + \delta_j + \epsilon_{ij}
+$$
+
+where $\delta_i$ and $\delta_j$ are origin and destination station fixed effects^[In this session, $\delta_i$ and $\delta_j$ are estimated as independent variables so their estimates are similar to interpret to those in $\beta$. An alternative approach could be to model them as random effects in a multilevel framework.], and the rest is as above. This strategy accounts for all the unobserved heterogeneity associated with the location of the station. Technically speaking, we simply need to introduce `orig` and `dest` in the the model:
+
+```{r}
+m2 <- lm('trips ~ straight_dist + total_up + total_down + orig + dest', data=db_std)
+```
+
+And with our new model, we can have a look at how well it does at predicting the overall number of trips:
+
+
+```{r}
+plot(density(m2$fitted.values), 
+     xlim=c(-100, max(db_std$trips)),
+     ylim=c(0, max(c(
+                  max(density(m2$fitted.values)$y), 
+                  max(density(db_std$trips)$y)
+                  )
+               )
+      ),
+     col='white',
+     main='')
+# Loop for realizations
+for(i in 1:250){
+  tmp_y <- generate_draw(m2)
+  lines(density(tmp_y),
+        col='grey',
+        lwd=0.1
+        )
+}
+#
+lines(density(m2$fitted.values), 
+      col='black',
+      main='')
+lines(density(db_std$trips), 
+      col='red',
+      main='')
+legend('topright', 
+       c('Predicted', 'Actual', 'Simulated (n=250)'),
+       col=c('black', 'red', 'grey'),
+       lwd=1)
+title(main="Predictive check - Orig/dest FE model")
+```
+
+That looks significantly better, doesn't it? In fact, our model now better accounts for the long tail where a few routes take a lot of trips. This is likely because the distribution of trips is far from random across stations and our origin and destination fixed effects do a decent job at accounting for that structure. However our model is still notably underpredicting less popular routes and overpredicting routes with above average number of trips. Maybe we should think about moving beyond a simple linear model.
+
+### Get better predictors.
+
 
 # Predicting flows
 
-  * Evaluate model performance predicting last month
+* Swap trips for previous year's
+* Compare predictions from the models with last year's counts in terms of predictive performance (distribution, RMSE)
 
 # References

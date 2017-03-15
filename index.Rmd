@@ -62,4 +62,6 @@ library(gstat)
 library(plyr)
 # Spatial Econometrics routines
 library(spdep)
+# Simulation methods for modeling
+library(arm)
 ```
