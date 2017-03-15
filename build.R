@@ -12,6 +12,6 @@ library(tufte)
     #file.rename('sp_eco.pdf', 'sp_eco_book.pdf')
     
     render('flows.Rmd')
-    render('flows.Rmd', 'tufte_handout')
-    file.rename('flows.pdf', 'flows_book.pdf')
+    #render('flows.Rmd', 'tufte_handout')
+    #file.rename('flows.pdf', 'flows_book.pdf')
 
