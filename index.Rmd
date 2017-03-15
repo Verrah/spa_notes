@@ -65,3 +65,9 @@ library(spdep)
 # Simulation methods for modeling
 library(arm)
 ```
+
+This page was last built on:
+
+```{r}
+date()
+```
