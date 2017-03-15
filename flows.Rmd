@@ -7,10 +7,12 @@ output:
   tufte::tufte_html:
       css: extra.css
       toc: true
-      toc_depth: 3
+      toc_depth: 2
   tufte::tufte_handout:
     citation_package: natbib
     latex_engine: xelatex
+    toc: true
+    toc_depth: 2
   tufte::tufte_book:
     citation_package: natbib
     latex_engine: xelatex
@@ -357,7 +359,7 @@ The bad news from the previous section is that our initial model is not great at
 1. Recognize the structure of your data.
 1. Get better predictors.
 
-### Use better approximations to model your dependent variable.
+* **Use better approximations to model your dependent variable**
 
 Standard OLS regression assumes that the error term and, since the predictors are deterministic, the dependent variable are distributed following a normal (gaussian) distribution. This is usually a good approximation for several phenomena of interest, but maybe not the best one for trips along routes: for one, we know trips cannot be negative, which the normal distribution does not account for^[For an illustration of this, consider the amount of probability mass to the left of zero in the predictive checks above.]; more subtly, their distribution is not really symmetric but skewed with a very long tail on the right. This is common in variables that represent counts and that is why usually it is more appropriate to fit a model that relies on a distribution different from the normal.
 
@@ -455,7 +457,7 @@ title(main="Predictive check - Poisson model")
 
 Voila! Although the curve is still a bit off, centered too much to the right of the actual data, our predictive simulation leaves the fitted values right in the middle. This speaks to a better fit of the model to the actual distribution othe original data follow. The idea 
 
-### Recognize the structure of your data
+* **Recognize the structure of your data**
 
 So far, we've treated our dataset as if it was flat (i.e. comprise of fully independent realizations) when in fact it is not. Most crucially, our baseline model does not account for the fact that every observation in the dataset pertains to a trip between two stations. This means that all the trips from or to the same station probably share elements which likely help explain how many trips are undertaken between stations. For example, think of trips to an from a station located in the famous Embarcadero, a popular tourist spot. Every route to and from there probably has more trips due to the popularity of the area and we are currently not acknowledging it in the model.
 
@@ -499,7 +501,7 @@ title(main="Predictive check - Orig/dest FE Poisson model")
 
 That looks significantly better, doesn't it? In fact, our model now better accounts for the long tail where a few routes take a lot of trips. This is likely because the distribution of trips is far from random across stations and our origin and destination fixed effects do a decent job at accounting for that structure. However our model is still notably underpredicting less popular routes and overpredicting routes with above average number of trips. Maybe we should think about moving beyond a simple linear model.
 
-### Get better predictors.
+* **Get better predictors**
 
 The final extension is, in principle, always available but, in practice, it can be tricky to implement. The core idea is that your baseline model might not have the best measurement of the phenomena you want to account for. In our example, we can think of the distance between stations. So far, we have been including the distance measured "as the crow flies" between stations. Although in some cases this is a good approximation (particularly when distances are long and likely route taken is as close to straight as possible), in some cases like ours, where the street layout and the presence of elevation probably matter more than the actual final distance pedalled, this is not necessarily a safe assumption.
 
